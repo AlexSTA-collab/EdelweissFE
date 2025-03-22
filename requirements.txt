@@ -1,0 +1,24 @@
+anaconda::mkl
+anaconda::mkl-include
+anaconda::intel-openmp
+cmake
+compilers
+cython
+docutils=0.16
+gstools
+make
+matplotlib
+numpy
+numpydoc
+# petsc4py
+# pymumps
+python=3.12
+pytest
+pyvista
+prettytable
+scipy
+suitesparse
+sphinx
+sphinx_rtd_theme
+sympy
+vtk>=9.1.0
