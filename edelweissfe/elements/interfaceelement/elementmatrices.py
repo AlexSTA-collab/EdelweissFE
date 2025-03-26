@@ -52,20 +52,25 @@ def computeJacobian(x: np.ndarray, element, quad_points, dim: int):
         Dimension the element has.
     """
     # Define interface element and quadrature rule
-    if dim == 1:
+    if (dim-1) == 1:
+
+        print('QUAD POINTS:\n', quad_points)
         # Initialize Jacobian matrices at each quadrature point
-        jacobians = np.zeros((len(quad_points), 2, 1))
-        # number of quadrature points, 2x1 Jacobian matrix
+        jacobians = np.zeros((len(quad_points), dim, 1))
+        # number of quadrature points, scalar Jacobian matrix
 
         # Compute basis function values at quadrature points
-        basis_values = element.tabulate(0, quad_points)[0]
+        # basis_values = element.tabulate(0, quad_points)[0]
 
         # Compute gradient matrices (shape function derivatives at quadrature points)
         gradients = element.tabulate(1, quad_points)[1]
+        
+        print('gradients:\n',gradients)
+        print('gradients.shape:', gradients.shape)
 
         for qp in range(len(quad_points)):  # Loop over quadrature points
             dphi_dxi = gradients[qp, :, 0]  # dφ/dξ for all nodes
-            dphi_deta = gradients[qp, :, 1]  # dφ/dη for all nodes
+            #dphi_deta = gradients[qp, :, 1]  # dφ/dη for all nodes
 
             # Compute Jacobian matrix
             J = np.zeros((2, 1))
@@ -74,28 +79,34 @@ def computeJacobian(x: np.ndarray, element, quad_points, dim: int):
 
             jacobians[qp] = J  # Store Jacobian for this quadrature point
 
-    elif dim == 2:
+    elif (dim-1) == 2:
         # Initialize Jacobian matrices at each quadrature point
-        jacobians = np.zeros((len(quad_points), 3, 2))
+        jacobians = np.zeros((len(quad_points), dim, 2))
         # number of quadrature points, 3x2 Jacobian matrix
 
         # Compute basis function values at quadrature points
-        basis_values = element.tabulate(0, quad_points)[0]
+        # basis_values = element.tabulate(0, quad_points)[0]
 
         # Compute gradient matrices
         # (shape function derivatives at quadrature points)
-        gradients = element.tabulate(1, quad_points)[1]
+
+        gradients = element.tabulate(1, quad_points)[1:] # we only keep one component because the element has the same dependence in xi,eta
+        #print('gradients:\n',gradients)
+        #print('gradients.shape:', gradients.shape)
 
         for qp in range(len(quad_points)):  # Loop over quadrature points
-            dphi_dxi = gradients[qp, :, 0]  # dφ/dξ for all nodes
-            dphi_deta = gradients[qp, :, 1]  # dφ/dη for all nodes
-
+            dphi_dxi = gradients[0, qp, :, :]  # dφ/dξ for all nodes
+            dphi_deta = gradients[1, qp, :, :]  # dφ/dη for all nodes
+            
             # Compute Jacobian matrix
-            J = np.zeros((2, 2))
-            J[0, 0] = np.sum(x[:, 0] * dphi_dxi)  # dx/dξ
-            J[0, 1] = np.sum(x[:, 0] * dphi_deta)  # dx/dη
-            J[1, 0] = np.sum(x[:, 1] * dphi_dxi)  # dy/dξ
-            J[1, 1] = np.sum(x[:, 1] * dphi_deta)  # dy/dη
+            J = np.zeros((3, 2))
+
+            J[0, 0] = np.einsum('i,ip->p', x[:, 0] , dphi_dxi)  # dx/dξ
+            J[0, 1] = np.einsum('i,ip->p', x[:, 0] , dphi_deta)  # dx/dη
+            J[1, 0] = np.einsum('i,ip->p', x[:, 1] , dphi_dxi)  # dy/dξ
+            J[1, 1] = np.einsum('i,ip->p', x[:, 1] , dphi_deta)  # dy/dη
+            J[2, 0] = np.einsum('i,ip->p', x[:, 2] , dphi_dxi)
+            J[2, 1] = np.einsum('i,ip->p', x[:, 2] , dphi_deta)
 
             jacobians[qp] = J  # Store Jacobian for this quadrature point
 
@@ -121,28 +132,93 @@ def compute_grad(x: np.ndarray, element, quad_points, nInt: int, dim: int):
     for the shear strain not the symmetric part only
     """
 
-    J_at_GPS, gradients = computeJacobian(x, element, quad_points, dim)
+    J_at_GPs, gradients = computeJacobian(x, element, quad_points, dim)
+    grad_phi_x_y_at_GPs_shape = np.append(gradients.shape[:-1],J_at_GPs.shape[1])
+    grad_phi_x_y_at_GPs = np.zeros(grad_phi_x_y_at_GPs_shape)  # Shape (GP,node,dim)
+    print('J_at_GPs shape:', J_at_GPs.shape, '\n', J_at_GPs)
+    print('gradients shape', gradients.shape, '\n', gradients)
+    print('grad_phi_x_y_at_GPs_shape', grad_phi_x_y_at_GPs_shape)
+    # The elements ar embedded in a higher dimensional space 
+    # We follow the metric tensor approach to actually compute the gradients from refernce ti global configuration
+    for qp in range(nInt):
+        print('GP:', qp)
+        print('J_at_GPs[qp]:\n', J_at_GPs[qp])
+        G = np.einsum('ij,jk->ik',J_at_GPs[qp].T,J_at_GPs[qp])
+        print('G:\n', G)
+        G_inv = np.linalg.inv(G)
+        print('G_inv',G_inv)
+        J_pseudo_inverse_transpose = np.einsum('ij,jk->ik', J_at_GPs[qp], G_inv)
+        #for node in range(gradients.shape[1]): # loops over the nodes of the element each one has its own gradient vectors
+        #print('node', node)
+        #print('shape of grad_phi_x_y_at_GPs at gp:\n', grad_phi_x_y_at_GPs[qp].shape)
+        #print('shape of gtadients at qp:',gradients[qp].shape)
+        #print('shape of pseudo_inverse_transpose:',J_pseudo_inverse_transpose.shape)
+        #print(J_pseudo_inverse_transpose)
+        #print('gradients at GP:', gradients[qp].shape)
+        #print(gradients[qp])
+        if dim == 2: 
+            grad_phi_x_y_at_GPs[qp] = np.einsum(
+                "mn,pn->pm",J_pseudo_inverse_transpose, gradients[qp])    
+        elif dim == 3:
+            for comp in range(gradients.shape[0]):
+                grad_phi_x_y_at_GPs[comp,qp] = np.einsum(
+                "mn,pn->pm",J_pseudo_inverse_transpose, gradients[comp,qp])
+        print('grad_phi_x_y_at_GPs',grad_phi_x_y_at_GPs)    
 
-    J_inv_at_GPs = np.zeros(J_at_GPS.shape)
-    grad_phi_x_y_at_GPs = np.zeros(gradients.shape)  # Shape (GP,node,dim)
 
-    for qp in range(nInt):  # Loop over quadrature points
-        J_inv_at_GPs[qp] = np.linalg.inv(J_at_GPS[qp])
-        grad_phi_x_y_at_GPs[qp] = np.einsum(
-            "ij,jk->ik", J_inv_at_GPs[qp], gradients[qp, :, :]
-        )
+    #for qp in range(nInt):  # Loop over quadrature points
+    #    Q, R = np.linalg.qr(J_at_GPs[qp], mode='complete') # QR factorization of J^T
+        #print('J_at_GPs:\n',J_at_GPs[qp])
+        #print('J_at_Gauss_points shape:', J_at_GPs[qp].shape)
+        # Check if Q needs to be extended
+    #    if Q.shape[1] < J_at_GPs[qp].shape[0]:
+        # Extend Q to span the full space
+    #        null_space = np.eye(J_at_GPs[qp].shape[0]) - Q @ Q.T
+    #        Q = np.hstack((Q, null_space))
+    #        rank = np.linalg.matrix_rank(R)
+    #        J_r_inv_at_GPs = np.linalg.inv(R[:rank, :rank])
+    #        print("shape condition is satisfied")
+    #    else:
+    #        rank = np.linalg.matrix_rank(R)  # Find rank    
+    #        J_r_inv_at_GPs =np.linalg.inv( R[:rank, :rank])
+        # Check if Q needs to be extended
+        #if Q.shape[1] < J.shape[0]:
+            # Extend Q to span the full space
+        #     null_space = np.eye(J.shape[0]) - Q @ Q.T
+        #     Q = np.hstack((Q, null_space))
+    #    print('GP',qp)
+    #    print('J_at_GPs:\n', J_at_GPs[qp])
+    #    print("Inverse of the Jacobian J:\n", J_r_inv_at_GPs, J_r_inv_at_GPs.shape)
+    #    print("Q[:,:rank] matrix:\n", Q[:,:rank], Q[:,:rank].shape)
+    #    print("R matrix:\n", R, R.shape) 
+    #    print("refernce gradients\n", gradients[qp], gradients[qp].shape)
 
-    # grad_phi_x_y_at_GPs_stacked = np.repeat(
+
+
+        #print("Jacobian J:\n", J)
+        #print("Q matrix:\n", Q)
+        #print("R matrix:\n", R)
+    #    temp = np.einsum('ij,jp->ip',Q[:,:rank],J_r_inv_at_GPs)
+    #    print("temp.T", temp.T, temp.shape)
+    #    grad_phi_x_y_at_GPs[qp] = np.einsum(
+    #        "ip,pk->ik",temp.T, gradients[qp]
+    #    )
+    #    print("global gradients", grad_phi_x_y_at_GPs[qp])
+    print("global gradients for scallar case:\n", grad_phi_x_y_at_GPs)
+# grad_phi_x_y_at_GPs_stacked = np.repeat(
     # grad_phi_x_y_at_GPs[:,:,np.newaxis, :], dim ,axis = 2)
-    # Shape: (GP, node, component, dim)
+    # Shape: (component, GP, node dim)
 
     grad_phi_x_y_at_GPs_stacked = np.repeat(
         grad_phi_x_y_at_GPs[np.newaxis, :, :, :], dim, axis=0
     )
     # Shape: (component, GP, node, dim)
-    grad_phi_x_y_at_GPs_stacked = np.transpose(
-        grad_phi_x_y_at_GPs_stacked, (-2, 0, -1, 1)
-    )
+    #grad_phi_x_y_at_GPs_stacked = np.transpose(
+    #    grad_phi_x_y_at_GPs_stacked, (-2, 0, -1, 1)
+    #)
+
+    #print('gradients_reference:\n',gradients)
+    print('gradients_global:\n', grad_phi_x_y_at_GPs_stacked)
     # Shape: (node, component, dim, GP), In order to preserve more
     # compatibility with the implemented functions
     return grad_phi_x_y_at_GPs_stacked
@@ -168,13 +244,23 @@ def compute_surface_grad(
 
     """
 
-    n, I, J, N, T = interface_geometry(x, nInt, nNodes, dim)
+    _, _, T = interface_geometry(x, element, quad_points, nInt, dim)
     # T is of Shape: (component, dim, GP )
     grad_phi_x_y_at_GPs_stacked = compute_grad(x, element, quad_points, nInt, dim)
     # Shape: (node, component, dim, GP)
-    surface_grad_phi_x_y_at_GPs_stacked = np.einsum(
-        "aikq, kjq -> aijq", grad_phi_x_y_at_GPs_stacked, T
-    )
+
+    print('grad_phi_x_y_at_GPs_stacked:\n',grad_phi_x_y_at_GPs_stacked.shape,'\n', grad_phi_x_y_at_GPs_stacked)
+    print('T\n:',T.shape,'\n',T)
+    if dim == 2:
+        surface_grad_phi_x_y_at_GPs_stacked = np.einsum(
+            "iqaj, jkq -> aikq", grad_phi_x_y_at_GPs_stacked, T
+        )
+    elif dim == 3:
+        surface_grad_phi_x_y_at_GPs_stacked = np.einsum(
+            "ibqaj, jkq -> abikq", grad_phi_x_y_at_GPs_stacked, T
+        )
+
+       
     # Shape: (node, component, dim, GP)
 
     return surface_grad_phi_x_y_at_GPs_stacked
@@ -212,13 +298,18 @@ def compute_surface_div_grad(
 
     """
 
-    n, I, J, N, T = interface_geometry(x, nInt, nNodes, dim)
+    _, _, T = interface_geometry(x, element, quad_points, nInt, dim)
     # T is of Shape: (component, dim, GP )
     grad_phi_x_y_at_GPs_stacked = compute_grad(x, element, quad_points, nInt, dim)
     # Shape: (node, component, dim, GP)
-    surface_div_phi_x_y_at_GPs_stacked = np.einsum(
-        "aikq, ikq -> aq", grad_phi_x_y_at_GPs_stacked, T
-    )
+    if dim == 2:
+        surface_div_phi_x_y_at_GPs_stacked = np.einsum(
+        "iqaj, ijq -> aq", grad_phi_x_y_at_GPs_stacked, T
+        )
+    elif dim ==3:
+        surface_div_phi_x_y_at_GPs_stacked = np.einsum(
+        "ibqaj, ijq -> baq", grad_phi_x_y_at_GPs_stacked, T
+        )
     # Shape: (node, GP)
 
     return surface_div_phi_x_y_at_GPs_stacked
@@ -240,14 +331,20 @@ def computeNOperator(x: np.ndarray, element, quad_points, dim: int):
     """
     # Define interface element and quadrature rule
 
-    N = element.tabulate(0, quad_points)[1]
-
+    N = element.tabulate(0, quad_points)[0]
+    print('N:\n',N)
+    #print('N.shape:', N.shape)
+    
     # Get the stacked vector of interpolation functions with
     # Shape: (node, component, GP)
     N_stacked = np.repeat(N[np.newaxis, :, :], dim, axis=0)
+    #print('N_stacked',N_stacked)
+    #print('N_stacked.shape',N_stacked.shape)
     # Shape: (component, GP, node)
-    N_stacked = np.transpose(N_stacked, (-1, 0, 1))
+    
+    N_stacked = np.transpose(N_stacked, (2, 0, 1, 3))
     # Shape: (node, component, GP),
+    #print('N_stacked_transpose:',N_stacked)
     # In order to preserve more compatibility with the implemented functions
 
     return N_stacked
@@ -341,30 +438,58 @@ def interface_geometry_system_couplings(
     return M, B, L, A, G
 
 
-def interface_geometry(x: np.ndarray, nInt: int, nNodes: int, dim: int):
+def interface_geometry(x: np.ndarray, element, quad_points, nInt: int, dim: int):
     """
-    We calculate the normal vector using math:: z = g(x,y)=\sum Ν^A(x,y)z^A
-    Then n = \left(\grad g, 1) (+1 shows that the normal point towrds
+    We calculate the normal vector using math:: z = g(x,y)=math::sum Ν^A(x,y)z^A
+    Then n = math::left(math::grad g, 1) (+1 shows that the normal point towrds
     increasing z)
     the normal is then stored at each GP as  [g_{,x}, g_{,y}, 1]
     """
-    grad_g = compute_grad(x, nInt, nNodes, dim)[0]  # I only need one component
-    normal_shape = np.array(grad_g.shape[0], grad_g.shape[0] + 1)
-    n = np.ones((normal_shape))
+    grad_g = compute_grad(x, element, quad_points, nInt, dim)[0] # I only need one component
+    shape_functions_eval_at_quad_points = element.tabulate(0,quad_points)[0]
+    print('x shape', x.shape)
+    print('shape_functions_eval_at_quad_points shape:',shape_functions_eval_at_quad_points.shape)
+    #quad_points_global_coordinates = np.einsum('qi,ij->qj',shape_functions_eval_at_quad_points[:,:,0],x) 
+    #print('quad_points_global_coordinates shape',quad_points_global_coordinates)
+    print('grad_g\n', grad_g.shape)
+    normal = np.zeros((quad_points.shape[0],grad_g.shape[-1]))
+
+    print('normal shape:\n', normal.shape)
 
     for qp in range(grad_g.shape[0]):
-        n[qp] = np.append(grad_g[qp], 1)
+        
+        if dim == 2:
+            # 1D element in 2D: Rotate tangent (-t_y, t_x)
+            print('grad_g:\n',grad_g[qp])
+            print('global_coordinates:\n', x)
+            t = np.einsum('ij,ij->j',grad_g[qp], x)  # Single tangent vector
+            print('t',t)
+            #print('tangent vector t:',t)
+            normal[qp] = np.array([-t[1], t[0]]) #I take the normal to point upwards 
+            
+        else:
+            # General case (2D element in 3D, 3D element in 4D, etc.)
+            #for comp in range(grad_g.shape[0]):
+            tangents = np.einsum('ijk,jk->ijk',grad_g[:, qp, :, :], x)  # Extract tangent vectors
+            
+            print('tangents',tangents)
+            normal[qp] = np.cross(tangents[0,qp],tangents[1,qp])  # Cross product of the tangent vectors
 
-    N = np.einsum("iq,jq->ijq", n.T, n.T)
-    # To avoid uneccesary changes in the main part of the code
-    # I return the transpose of the normal -> Shape (component, dim,GP)
+                # Normalize the normal vector
+        normal[qp] /= np.linalg.norm(normal[qp], keepdims=True) 
+    
+    print('normal:\n',normal.shape)
+    print('normal:', normal)
+    N = np.einsum("qi,qj->ijq", normal, normal) #We keep the Gauss point dimension at the end to assure compatibility 
+                                                #with the other functions present in the material
+    print('N\n', N.shape)
 
-    I = np.broadcast_to(np.eye(x.shape[0])[:, :, np.newaxis], N.shape)
+    I = np.broadcast_to(np.eye(x.shape[1])[:, :, np.newaxis], N.shape)
 
-    J = np.broadcast_to(np.eye(x.shape[0])[:, :, np.newaxis], N.shape)
+    #J = np.broadcast_to(np.eye(x.shape[0])[:, :, np.newaxis], N.shape)
 
     T = I - N
-    return n, I, J, N, T
+    return normal, N, T
 
 
 def calculate_material_matrices(

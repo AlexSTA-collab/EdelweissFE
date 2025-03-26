@@ -111,9 +111,9 @@ elLibrary = CaseInsensitiveDict(
         ensightType="line3",
         nSpatialDimensions=2,
         nInt=3,
-        element=basix.create_element(basix.ElementFamily.P, basix.CellType.interval, 2),
-        qpoints=basix.make_quadrature(basix.CellType.interval, 3)[0],
-        w=basix.make_quadrature(basix.CellType.interval, 3)[1],
+        element=basix.create_element(basix.ElementFamily.P, basix.CellType.interval, 2, basix.LagrangeVariant.equispaced),
+        qpoints=basix.make_quadrature(basix.CellType.interval, 4)[0],
+        w=basix.make_quadrature(basix.CellType.interval, 4)[1],
         matSize=3,
         index=np.array([0, 1, 3]),
         plStrain=True,
@@ -421,8 +421,12 @@ class InterfaceElement(BaseElement):
             self.nSpatialDimensions,
         )
 
-        self.n, self.I, self.J, self.N, self.T = interface_geometry(
-            self._nodesCoordinates, self._nInt, self.nNodes, self.nSpatialDimensions
+        self.n, self.N, self.T = interface_geometry(
+            self._nodesCoordinates,
+            self._element,
+            self._qpoints,
+            self._nInt, 
+            self.nSpatialDimensions
         )
 
     def setMaterial(self, material: type):
@@ -814,3 +818,44 @@ class InterfaceElement(BaseElement):
             self.nSpatialDimensions,
         )
         return self._nodesCoordinates @ N
+        
+def main():
+    interface_element = InterfaceElement('ILine3R',0)
+    
+    #nodes = np.array([[0.0, 0.0],
+    #                 [1.0, 1.0]])
+
+    nodes = np.array([[0.0, 0.0],
+                      [1.0, 0.0],
+                      [0.5,0.0]])
+    
+    #nodes = np.array([[0.0, 0.0, 0.0],
+    #                 [0.0, 1.0, 0.0],
+    #                 [1.0, 1.0, 0.0],
+    #                 [1.0, 0.0, 0.0]])
+
+    interface_element._nodesCoordinates = nodes
+    print(interface_element.elementtype)
+    print(interface_element._nodesCoordinates)
+
+    print(interface_element._nNodes) 
+    print(interface_element._nDof)
+    print(interface_element._dofIndices)
+    print(interface_element._ensightType)
+    print(interface_element.nSpatialDimensions) 
+    print(interface_element._nInt)
+    print(interface_element._element)
+    print(interface_element._qpoints)
+    print(interface_element._weight)
+    print(interface_element._matrixSize)
+    print(interface_element._activeVoigtIndices)
+    print(interface_element.planeStrain)
+    print(interface_element.nSpatialDimensions)
+    # print(interface_element._t)  # "thickn
+    print(interface_element._fields)
+    print(interface_element._dStrain)
+
+    interface_element.initializeElement()
+
+if __name__=="__main__":
+    main()
