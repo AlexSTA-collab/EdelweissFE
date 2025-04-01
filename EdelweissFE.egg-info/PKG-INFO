@@ -1,0 +1,9 @@
+Metadata-Version: 2.1
+Name: EdelweissFE
+Version: 24.12
+Summary: EdelweissFE: A light-weight, platform-independent, parallel finite element framework.
+Home-page: https://github.com/EdelweissFE/EdelweissFE
+Author: Matthias Neuner
+Author-email: matthias.neuner@uibk.ac.at
+License: LGPL-2.1
+License-File: LICENSE.md

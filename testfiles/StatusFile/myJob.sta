@@ -1,0 +1,9 @@
+#
+# This is a status file of EdelweissFE.
+#
+# step   inc iters converged    time inc    time end    notes
+#
+     0     0     1         1   0.000e+00   0.000e+00    # 
+     0     1     1         1   1.000e+00   1.000e+00    # 
+     1     0     1         1   0.000e+00   1.000e+00    # 
+     1     1     2         1   1.000e+00   2.000e+00    # 
