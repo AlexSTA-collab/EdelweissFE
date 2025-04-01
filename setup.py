@@ -119,6 +119,21 @@ extensions += [
     )
 ]
 
+print("Gather the extension for the MarmotInterfaceMaterial, linked to the Marmot library")
+extensions += [
+    Extension(
+        "*",
+        sources=[
+            "edelweissfe/materials/marmotinterfacematerial/marmotinterfacematerialwrapper.pyx",
+        ],
+        include_dirs=[join(marmot_dir, "include"), numpy.get_include()],
+        libraries=["Marmot"],
+        library_dirs=[join(marmot_dir, "lib")],
+        runtime_library_dirs=[join(marmot_dir, "lib")],
+        language="c++",
+    )
+]
+
 print("Gather the extension for the fast element result collector")
 extensions += [
     Extension(
