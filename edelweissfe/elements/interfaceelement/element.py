@@ -31,17 +31,17 @@ import basix
 import numpy as np
 import numpy.linalg as lin
 
+import sys
+sys.path.append('/home/alexsta1993/alexandros/EdelweissFE')
 from edelweissfe.elements.base.baseelement import BaseElement
-from edelweissfe.elements.interfaceelement.marmotmaterialInterfaceVonMiseswrapper import InterfaceVonMisesModelWrapper
-)
+from edelweissfe.materials.marmotinterfacematerial.marmotinterfacematerialwrapper import MarmotInterfaceMaterialWrapper
+
 
 from edelweissfe.elements.interfaceelement.elementmatrices import (
     compute_grad,
     compute_surface_grad,
     compute_surface_div_grad,
     interface_geometry,
-    voigt_to_tensor,
-    calculate_material_matrices,
     assign_K_jumpu_jumpv,
     assign_K_grad_s_u_grad_s_v,
     assign_K_grad_s_u_jump_v,
@@ -339,10 +339,16 @@ class InterfaceElement(BaseElement):
         self._matrixSize = properties["matSize"]
         self._activeVoigtIndices = properties["index"]
         self.planeStrain = properties["plStrain"]
-        if self.nSpatialDimensions == 3:
+        if self.nSpatialDimensions >1:
             self._t = 1  # "thickness" for 3D elements
         self._fields = [["displacement"] for i in range(self._nNodes)]
         self._dStrain = np.zeros([self._nInt, 9]) # We don't assume symmetry of the stresses (The material is symmetric instead)
+
+        self.number_of_dofs =int(self._nDof*self.nSpatialDimensions)
+        self.number_of_strain_comp = int(self._nDof*self.nSpatialDimensions*self.nSpatialDimensions)
+        
+        self._dU_GPs = np.zeros((self._nInt, self.nSpatialDimensions*2)) # GPs times the spatial dimension for vector elements top interpolation and bottom interpolation 
+        self._dSurface_strain_GPs = np.zeros((self._nInt,self.nSpatialDimensions*self.nSpatialDimensions*2)) #See the definition of the einsum below q,i*j*d
 
     def setNodes(self, nodes: list[Node]):
         """Assign the nodes to the element.
@@ -398,7 +404,7 @@ class InterfaceElement(BaseElement):
             self.nSpatialDimensions,
         )
 
-        self.grad = compute_grad(
+        self.grad, self.sqrt_detG = compute_grad(
             self._nodesCoordinates,
             self._element,
             self._qpoints,
@@ -410,7 +416,6 @@ class InterfaceElement(BaseElement):
             self._nodesCoordinates,
             self._element,
             self._qpoints,
-            self.nNodes,
             self._nInt,
             self.nSpatialDimensions,
         )
@@ -419,7 +424,6 @@ class InterfaceElement(BaseElement):
             self._nodesCoordinates,
             self._element,
             self._qpoints,
-            self.nNodes,
             self._nInt,
             self.nSpatialDimensions,
         )
@@ -432,7 +436,7 @@ class InterfaceElement(BaseElement):
             self.nSpatialDimensions
         )
 
-    def setMaterial(self, material: type):
+    def setMaterial(self, materialName: str, materialProperties: np.ndarray):
         """Assign a material.
 
         Parameters
@@ -440,14 +444,19 @@ class InterfaceElement(BaseElement):
         material
             An initialized instance of a material.
         """
+        self._materialID = int(materialName)
+        self._materialProperties = materialProperties
+        self.material = MarmotInterfaceMaterialWrapper(self._materialProperties, self._materialID)
+        #self._theMarmotInterfaceMaterialInstance = self._marmotinterfacematerialwrapper._theMarmotInterfaceMaterialInstance  # It should contain C0_ijkl, CM_ijkl, CI_ijkl
+        
+        #if self.planeStrain:  # use 3D
+        #    self._matrixVoigtIndices = np.array([0, 1, 3])
+        #    self._matrixSize = (2+4)*2+(2+4)*2 # We will be storing the displacement, strain and the force, stress in the material
+        #else:
+        #    self._matrixVoigtIndices = np.arange(self._matrixSize)
+        stateVarsSize = (3+9) + 2*(3+ 9) +self.material.getNumberOfRequiredStateVars()
+        self._matrixSize = 21
 
-        self.material = material  # It should contain C0_ijkl, CM_ijkl, CI_ijkl
-        if self.planeStrain:  # use 3D
-            self._matrixVoigtIndices = np.array([0, 1, 3])
-            self._matrixSize = (2+4)*2+(2+4)*2 # We will be storing the displacement, strain and the force, stress in the material
-        else:
-            self._matrixVoigtIndices = np.arange(self._matrixSize)
-        stateVarsSize = 2*(3+9) + 2*(3+ 9) +self.material.getNumberOfRequiredStateVars()
         self._dStressdStrain = np.zeros(
             [self._nInt, self._matrixSize, self._matrixSize]
         )
@@ -456,16 +465,17 @@ class InterfaceElement(BaseElement):
         self._stateVars =[ 
             CaseInsensitiveDict(
                 {
-                    "force": self._stateVarsRef[i][0:6],
-                    "stress": self._stateVarsRef[i][6:24],
-            "displacement:":  self._stateVarsRef[i][24:30], 
-                    "strain": self._stateVarsRef[i][30:48],
-                    "materialstate": self._stateVarsRef[i][48:],
+                    "force": self._stateVarsRef[i][0:3],
+                    "surface stress": self._stateVarsRef[i][3:12],
+                    "displacement:":  self._stateVarsRef[i][12:18], 
+                    "surface strain": self._stateVarsRef[i][18:36],
+                    "materialstate": self._stateVarsRef[i][36:],
                 }
             )
             for i in range(self._nInt)
         ]
         self._stateVarsTemp = np.zeros([self._nInt, stateVarsSize])
+        print('material Initialization was successfull')
 
     def setInitialCondition(self, stateType: str, values: np.ndarray):
         """Assign initial conditions.
@@ -492,7 +502,7 @@ class InterfaceElement(BaseElement):
         load: np.ndarray,
         U: np.ndarray,
         time: np.ndarray,
-        dTime: float,
+        dT: float,
     ):
         """Evaluate residual and stiffness for given time, field, and field
         increment due to a surface load.
@@ -522,15 +532,7 @@ class InterfaceElement(BaseElement):
                         with this element provider."
         )
 
-    def computeYourself(
-        self,
-        K_: np.ndarray,
-        P: np.ndarray,
-        U: np.ndarray,
-        dU: np.ndarray,
-        time: np.ndarray,
-        dTime: float,
-    ):
+    def computeYourself(self, P: np.ndarray, K: np.ndarray, U: np.ndarray, dU: np.ndarray, time: float, dTime: float,):
         """Evaluate the residual and stiffness matrix for given time, field,
         and field increment due to a displacement or load.
 
@@ -551,7 +553,11 @@ class InterfaceElement(BaseElement):
         """
 
         # assume it's plain strain if it's not given by user
-        K = np.reshape(K_, (self._nDof, self._nDof))
+        print('Inside compute yourself:')
+        #print(self._nDof)
+        #print('K:\n', K)
+        #K = np.reshape(K, (self._nDof, self._nDof))
+        
         # copy all elements
         self._stateVarsTemp = [
             self._stateVarsRef[i].copy() for i in range(self._nInt)
@@ -560,24 +566,23 @@ class InterfaceElement(BaseElement):
         # strain increment
         # displacement increment top and bottom
         self.number_of_element_nodes = np.unique(self._nodesCoordinates).shape[0] # The element has double the number of spatial dofs we keep only the nodes necessary for the geometric decription
-        self.number_of_top_dofs =int(self.number_of_element_nodes*self.nSpatialDimensions)
-        self.number_of_top_strain_comp = int(self.number_of_element_nodes*self.nSpatialDimensions*self.nSpatialDimensions)
 
-        self._dStrain[:,:self.number_of_top_dofs] = np.einsum('aidq,ai->qid',computeNOperator(self._nodesCoordinates,self._element,self._qpoints,self.nSpatialDimensions),dU[:self.number_of_element_nodes]).reshape((self._nInt, -1))
-        self._dStrain[:,self.number_of_top_dofs:] = np.einsum('aidq,ai->qid',computeNOperator(self._nodesCoordinates,self._element,self._qpoints,self.nSpatialDimensions),dU[self.number_of_element_nodes:]).reshape((self._nInt, -1))
+        self.number_of_top_dofs =int(self.nSpatialDimensions)
+        self.number_of_top_strain_comp = int(self.nSpatialDimensions*self.nSpatialDimensions)
 
-        # surface strain increment top and bottom
-        self._dStrain[:self.number_of_top_strain_comp] = np.einsum('aijdq,ai->qijd',compute_surface_grad(self._nodesCoordinates,self._element,self._qpoints, self._nInt, self._nNodes,self.nSpatialDimensions),dU[:self.number_of_element_nodes]).reshape((self._nInt, -1))
-        self._dStrain[self.number_of_top_strain_comp:] = np.einsum('aijdq,ai->qijd',compute_surface_grad(self._nodesCoordinates,self._element,self._qpoints, self._nInt, self._nNodes,self.nSpatialDimensions),dU[:self.number_of_element_nodes]).reshape((self._nInt, -1))
+        self._dU_GPs[:,:self.number_of_top_dofs] = np.einsum('aiqd,ai->qid',computeNOperator(self._nodesCoordinates,self._element,self._qpoints,self.nSpatialDimensions),dU[:self.number_of_element_nodes]).reshape((self._nInt, -1))
+        self._dU_GPs[:,self.number_of_top_dofs:] = np.einsum('aiqd,ai->qid',computeNOperator(self._nodesCoordinates,self._element,self._qpoints,self.nSpatialDimensions),dU[self.number_of_element_nodes:]).reshape((self._nInt, -1))
+
+        self._dSurface_strain_GPs[:,:self.number_of_top_strain_comp] = np.einsum('aijq,ai->qij',compute_surface_grad(self._nodesCoordinates,self._element,self._qpoints, self._nInt,self.nSpatialDimensions),dU[:self.number_of_element_nodes]).reshape((self._nInt, -1))
+        self._dSurface_strain_GPs[:,self.number_of_top_strain_comp:] = np.einsum('aijq,ai->qij',compute_surface_grad(self._nodesCoordinates,self._element,self._qpoints, self._nInt,self.nSpatialDimensions),dU[:self.number_of_element_nodes]).reshape((self._nInt, -1))
         
-        self._dStressdStrain = K
-
         for i in range(self._nInt):
             # get stress and strain
-            force_at_Gauss = self._stateVarsTemp[i][0:6] #top and bottom 3+3
-            surface_stress_at_Gauss = self._stateVarsTemp[i][6:24] #top and bottom 9+9
+            self._force_at_Gauss = self._stateVarsTemp[i][0:self.nSpatialDimensions] # 3
+            self._surface_stress_at_Gauss = self._stateVarsTemp[i][3:int(3+self.nSpatialDimensions**2)].reshape((self.nSpatialDimensions,self.nSpatialDimensions)) #9
 
-            self.material.assignCurrentStateVars(self._stateVarsTemp[i][24:])
+            self.material.assignStateVars(self._stateVarsTemp[i][24:]) #Not necessary for now... (elasticity)
+
             # use 3D for 2D planeStrain
             # Calculate material properties for the interface
             # These are computed at the begining of the analysis. Then we store them to the dsde matrix.
@@ -588,20 +593,21 @@ class InterfaceElement(BaseElement):
                 raise Exception("Plain stress is not yet implemented in this element provider.")
                 # self.material.computePlaneStress(stress, self._dStressdStrain[i], self._dStrain[i], time, dTime)
             else:
-                self.material.computeStress(
-                    force_at_Gauss,
-                    surface_stress_at_Gauss,
-                    self._dStressdStrain[i],
-                    self._dStrain[i],
-                    self.n,
-                    time,
-                    dTime
-                )
 
-            Z_ijkl = self._dStressdStrain[i][:9,:9].reshape((3,3,3,3))
-            H_inv_ij = self._dStressdStrain[i][9:12, 9:12].reshape((3,3))
-            H_inv_nF_ijk = self._dStressdStrain[i][:9,9:12].reshape((3,3,3))
-            Yn_H_inv_Fn_ijkl = self._dStressdStrain[i][12:21,12:21].reshape((3,3,3,3))
+                self.material.computeStress( self._force_at_Gauss,
+                                            self._surface_stress_at_Gauss,
+                                            self._dStressdStrain[i],
+                                            self._dU_GPs[i],
+                                            self._dSurface_strain_GPs[i],
+                                            self.n[i],
+                                            time,
+                                            dTime
+                                            )
+
+            Z_ijkl = self._dStressdStrain[i][:9,:9].reshape((3,3,3,3))[:self.nSpatialDimensions,:self.nSpatialDimensions,:self.nSpatialDimensions,:self.nSpatialDimensions] #Pick only the appropriate spatial dimensions
+            H_inv_ij = self._dStressdStrain[i][9:12, 9:12].reshape((3,3))[:self.nSpatialDimensions,:self.nSpatialDimensions]
+            H_inv_nF_ijk = self._dStressdStrain[i][:9,9:12].reshape((3,3,3))[:self.nSpatialDimensions,:self.nSpatialDimensions,:self.nSpatialDimensions]
+            Yn_H_inv_Fn_ijkl = self._dStressdStrain[i][12:21,12:21].reshape((3,3,3,3))[:self.nSpatialDimensions,:self.nSpatialDimensions,:self.nSpatialDimensions,:self.nSpatialDimensions]
 
             Nbasis = self.basis_function[
                 :, :, i
@@ -610,12 +616,20 @@ class InterfaceElement(BaseElement):
                 :, :, :, i
             ]  # surface gradient operator between the nodes of one side
             
-            J, _ = self.grad[:,:,:,i] #calculate the Jacobian
-            detJ = lin.det(J)  # Jacobi determinant
+            #J = self.grad[:,:,i,:] #calculate the Jacobian
+            detJ = self.sqrt_detG[i]
+        
+            #print('J:\n', J.shape,'\n', J)
+            #print('J.T:\n', J.T.shape, '\n', J.T)
+            #print(np.einsum('ij,jk->ik',J.T,J))
+            #detJ = lin.det(np.einsum('ij,jk->ik',J.T,J)[:-1,:-1])  # Jacobi determinant
 
             # additional energy due to jump terms with H_inv_ij
             # get stiffness matrix for element j in point i
             K_jumpu_jumpv = assign_K_jumpu_jumpv(self.grad, Nbasis, H_inv_ij, i)
+
+            print(K_jumpu_jumpv.shape)
+            print(detJ.shape)
             K += K_jumpu_jumpv * detJ * self._t * self._weight[i]
 
             # Additional energy due to surface stiffness terms with Z_ijkl
@@ -654,14 +668,24 @@ class InterfaceElement(BaseElement):
             # If we want more control we need to assign the extra forces and stress parts in the state variables vector increasing memory requirements
 
             # calculate P (jump contribution)
-            P_jumpv = assign_P_jumpv(self.grad, Nbasis, force_at_Gauss, i)
+            P_jumpv = assign_P_jumpv(self.grad, Nbasis, self._force_at_Gauss, i)
+
             P -= P_jumpv * detJ * self._t * self._weight[i]
 
             # calculate P (surface elasticity contribution)
-            P_grad_s_v = assign_P_grad_s_v(self.grad, grad_s, surface_stress_at_Gauss, i)
+            P_grad_s_v = assign_P_grad_s_v(self.grad, grad_s, self._surface_stress_at_Gauss, i)
             P -= P_grad_s_v * detJ * self._t * self._weight[i]
+            
 
-            self._stateVarsTemp[i][6:12] += self._dStrain[i]
+            #return the new force, surface_stress, dU_top, dU_bottom, dSurface_strain_top, dSurface_strain_bottom 
+            self._stateVarsTemp[i][0:self.nSpatialDimensions] = self._force_at_Gauss
+            self._stateVarsTemp[i][3:int(3+self.nSpatialDimensions**2)] = self._surface_stress_at_Gauss.reshape(-1)
+            self._stateVarsTemp[i][12:int(12+self._dU_GPs[i].shape[0])] = self._dU_GPs[i]
+            self._stateVarsTemp[i][18:int(18+self._dSurface_strain_GPs[i].shape[0])]  = self._dSurface_strain_GPs[i]
+            
+            print('Gauss points',i)
+            print('detJ', detJ)
+
 
     def computeBodyForce(
         self,
@@ -698,9 +722,10 @@ class InterfaceElement(BaseElement):
         )
 
         for i in range(self._nInt):
+            J, _ = self.grad[:,:,:,i] 
             P += (
                 np.outer(Nbasis[:, :, i], load).flatten()
-                * lin.det(self.J[:, :, i])
+                * lin.det(J[:, :, i])
                 * self._t
                 * self._weight[i]
             )
@@ -782,14 +807,14 @@ class InterfaceElement(BaseElement):
         return self._nodesCoordinates @ N
         
 def main():
-    interface_element = InterfaceElement('ILine3R',0)
+    interface_element = InterfaceElement('ILine2R',0)
     
-    #nodes = np.array([[0.0, 0.0],
-    #                 [1.0, 1.0]])
-
     nodes = np.array([[0.0, 0.0],
-                      [1.0, 0.0],
-                      [0.5,0.0]])
+                    [1.0, 1.0]])
+
+    #nodes = np.array([[0.0, 0.0],
+    #                  [2.0, 0.0],
+    #                  [1.0,0.0]])
     
     #nodes = np.array([[0.0, 0.0, 0.0],
     #                 [0.0, 1.0, 0.0],
@@ -797,27 +822,30 @@ def main():
     #                 [1.0, 0.0, 0.0]])
 
     interface_element._nodesCoordinates = nodes
-    print(interface_element.elementtype)
-    print(interface_element._nodesCoordinates)
-
-    print(interface_element._nNodes) 
-    print(interface_element._nDof)
-    print(interface_element._dofIndices)
-    print(interface_element._ensightType)
-    print(interface_element.nSpatialDimensions) 
-    print(interface_element._nInt)
-    print(interface_element._element)
-    print(interface_element._qpoints)
-    print(interface_element._weight)
-    print(interface_element._matrixSize)
-    print(interface_element._activeVoigtIndices)
-    print(interface_element.planeStrain)
-    print(interface_element.nSpatialDimensions)
-    # print(interface_element._t)  # "thickn
-    print(interface_element._fields)
-    print(interface_element._dStrain)
-
     interface_element.initializeElement()
+    
+    E_M= 200.0; nu_M = 0.3; E_I = 200.0; nu_I = 0.3; E_0 = 200.0*0.1; nu_0 = 0.3\
+
+    materialProperties = np.array([E_M, nu_M, E_I, nu_I, E_0, nu_0])
+    material = interface_element.setMaterial('1', materialProperties)
+ 
+    force_GPs = np.repeat(np.array([100., 200., 300.]),interface_element._nInt)
+    surface_stress_GPs = np.repeat(np.ones((3,3)), interface_element._nInt); dStress_dStrain_GPs = np.repeat(np.ones((21,21)), interface_element._nInt) * 2\
+    
+    P_nodes = np.zeros((interface_element.nDof,1))#.reshape((interface_element._nNodes,-1))
+    U_nodes = np.zeros((interface_element.nDof,1))#.reshape((interface_element._nNodes,-1))
+    dU_nodes = np.ones(interface_element.nDof) * 3 # the element contains 6 nodes 3 top 3 bottom with dofs per node eq to the spatialdimension i.e 12 in total
+    dU_nodes[int(dU_nodes.shape[0]//2):] = -1*dU_nodes[int(dU_nodes.shape[0]//2):]
+    
+
+    K = np.random.rand(interface_element._nDof,interface_element._nDof)
+    K = np.einsum('jk,ik->ij',K ,K.transpose((1,0))) # create a positive definite matrix to avoid singularities
+
+    print('Alex  K:', K.shape)
+    time= 0.0
+    dTime = 0.1
+
+    interface_element.computeYourself(P_nodes, K, U_nodes, dU_nodes.reshape((interface_element._nNodes,-1)), time, dTime)
 
 if __name__=="__main__":
     main()

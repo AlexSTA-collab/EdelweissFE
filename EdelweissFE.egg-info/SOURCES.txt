@@ -48,7 +48,6 @@ edelweissfe/elements/base/baseelement.py
 edelweissfe/elements/displacementelement/__init__.py
 edelweissfe/elements/displacementelement/element.py
 edelweissfe/elements/displacementelement/elementmatrices.py
-edelweissfe/elements/interfaceelement/__init__.py
 edelweissfe/elements/interfaceelement/element.py
 edelweissfe/elements/interfaceelement/elementmatrices.py
 edelweissfe/elements/marmotelement/__init__.py
@@ -86,6 +85,9 @@ edelweissfe/materials/base/__init__.py
 edelweissfe/materials/base/basehypoelasticmaterial.py
 edelweissfe/materials/linearelastic/__init__.py
 edelweissfe/materials/linearelastic/linearelastic.py
+edelweissfe/materials/marmotinterfacematerial/__init__.py
+edelweissfe/materials/marmotinterfacematerial/marmotinterfacematerialwrapper.cpp
+edelweissfe/materials/marmotinterfacematerial/test_marmotinterfacematerialwrapper.py
 edelweissfe/materials/vonmises/__init__.py
 edelweissfe/materials/vonmises/vonmises.py
 edelweissfe/models/__init__.py

@@ -78,7 +78,7 @@ cdef class MarmotInterfaceMaterialWrapper:
 
         self._stateVars = stateVars
 
-        self._theMarmotInterfaceMaterialInstance.assignStateVars(&self._stateVars[0], len(self.stateVars))
+        self._theMarmotInterfaceMaterialInstance.assignStateVars(&self._stateVars[0], len(self._stateVars))
 
     def getResultArray(self, result, getPersistentView=True):
 
