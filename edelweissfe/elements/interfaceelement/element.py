@@ -160,8 +160,8 @@ elLibrary = CaseInsensitiveDict(
         element=basix.create_element(
             basix.ElementFamily.serendipity, basix.CellType.quadrilateral, 2
         ),
-        qpoints=basix.make_quadrature(basix.CellType.quadrilateral, 3)[0],
-        w=basix.make_quadrature(basix.CellType.quadrilateral, 3)[1],
+        qpoints=basix.make_quadrature(basix.CellType.quadrilateral, 4)[0],
+        w=basix.make_quadrature(basix.CellType.quadrilateral, 4)[1],
         matSize=3,
         index=np.array([0, 1, 3]),
         plStrain=True,
@@ -177,24 +177,24 @@ elLibrary = CaseInsensitiveDict(
             basix.ElementFamily.serendipity, basix.CellType.quadrilateral, 2
         ),
         # remove the last quadrature point at t\he center
-        qpoints=basix.make_quadrature(basix.CellType.quadrilateral, 3)[0],
-        w=basix.make_quadrature(basix.CellType.quadrilateral, 3)[1],
+        qpoints=np.delete(basix.make_quadrature(basix.CellType.quadrilateral, 4)[0], 4, axis = 0),
+        w=np.delete(basix.make_quadrature(basix.CellType.quadrilateral, 4)[1], 4),
         matSize=3,
         index=np.array([0, 1, 3]),
         plStrain=True,
     ),
-    IQuad9=dict(
+    IQuad9R=dict(
         nNodes=18,
         nDof=54,
         dofIndices=np.arange(0, 54),
         ensightType="quad9",
         nSpatialDimensions=3,
-        nInt=9,
+        nInt=8,
         element=basix.create_element(
-            basix.ElementFamily.P, basix.CellType.quadrilateral, 1
+            basix.ElementFamily.P, basix.CellType.quadrilateral, 2
         ),
-        qpoints=basix.make_quadrature(basix.CellType.quadrilateral, 3)[0],
-        w=basix.make_quadrature(basix.CellType.quadrilateral, 3)[1],
+        qpoints=np.delete(basix.make_quadrature(basix.CellType.quadrilateral, 4)[0], 4, axis = 0),
+        w=np.delete(basix.make_quadrature(basix.CellType.quadrilateral, 4)[1], 4),
         matSize=3,
         index=np.array([0, 1, 3]),
         plStrain=True,
@@ -211,7 +211,7 @@ elLibrary.update(
         "IQuad4": elLibrary["IQuad4"],
         "IQuad8": elLibrary["IQuad8"],
         "IQuad8R": elLibrary["IQuad8R"],
-        "IQuad9": elLibrary["IQuad9"],
+        "IQuad9R": elLibrary["IQuad9R"],
     }
 )
 
@@ -334,6 +334,9 @@ class InterfaceElement(BaseElement):
         self._element = properties["element"]
         self._qpoints = properties["qpoints"]
         self._weight = properties["w"]
+
+        print('QPOINTS',self._qpoints)
+        print('W', self._weight)
 
         self._matrixSize = properties["matSize"]
         self._activeVoigtIndices = properties["index"]
@@ -565,16 +568,30 @@ class InterfaceElement(BaseElement):
 
         # strain increment
         # displacement increment top and bottom
-        self.number_of_element_nodes = np.unique(self._nodesCoordinates).shape[0] # The element has double the number of spatial dofs we keep only the nodes necessary for the geometric decription
-
-        self.number_of_top_dofs =int(self.nSpatialDimensions)
+        self.number_of_element_nodes = np.unique(self._nodesCoordinates, axis=0).shape[0] # The element has double the number of spatial dofs we keep only the nodes necessary for the geometric decription 
+        #print('self.number_of_element_nodes', self.number_of_element_nodes)
+        self.number_of_top_dofs =int(self._nDof/2)
+        #print('self.number_of_top_dofs',self.number_of_top_dofs)
         self.number_of_top_strain_comp = int(self.nSpatialDimensions*self.nSpatialDimensions)
+        
+        #print('shape functions squeezed',computeNOperator(self._nodesCoordinates,self._element,self._qpoints,self.nSpatialDimensions).squeeze(-1).shape)
+        #print('dU shape',dU[:self.number_of_element_nodes].shape)
+        #print('dU_GPs', np.einsum('aiq,ai->q',computeNOperator(self._nodesCoordinates,self._element,self._qpoints,self.nSpatialDimensions).squeeze(-1),dU[:self.number_of_element_nodes]))
 
-        self._dU_GPs[:,:self.number_of_top_dofs] = np.einsum('aiqd,ai->qid',computeNOperator(self._nodesCoordinates,self._element,self._qpoints,self.nSpatialDimensions),dU[:self.number_of_element_nodes]).reshape((self._nInt, -1))
-        self._dU_GPs[:,self.number_of_top_dofs:] = np.einsum('aiqd,ai->qid',computeNOperator(self._nodesCoordinates,self._element,self._qpoints,self.nSpatialDimensions),dU[self.number_of_element_nodes:]).reshape((self._nInt, -1))
+        #print('self.number_of_top_dofs',self.number_of_top_dofs )
+        #print('self._dU_GPs[:,:self.number_of_top_dofs]', computeNOperator(self._nodesCoordinates,self._element,self._qpoints,self.nSpatialDimensions).shape)
+        #print(dU[:self.number_of_top_dofs].reshape((-1,self.nSpatialDimensions)))
 
-        self._dSurface_strain_GPs[:,:self.number_of_top_strain_comp] = np.einsum('aijq,ai->qij',compute_surface_grad(self._nodesCoordinates,self._element,self._qpoints, self._nInt,self.nSpatialDimensions),dU[:self.number_of_element_nodes]).reshape((self._nInt, -1))
-        self._dSurface_strain_GPs[:,self.number_of_top_strain_comp:] = np.einsum('aijq,ai->qij',compute_surface_grad(self._nodesCoordinates,self._element,self._qpoints, self._nInt,self.nSpatialDimensions),dU[:self.number_of_element_nodes]).reshape((self._nInt, -1))
+
+        self._dU_GPs[:,:self.number_of_top_dofs] = np.einsum('aiq,ai->q',computeNOperator(self._nodesCoordinates,self._element,self._qpoints,self.nSpatialDimensions).squeeze(-1),dU[:self.number_of_element_nodes]).reshape((self._nInt, -1))
+        self._dU_GPs[:,self.number_of_top_dofs:] = np.einsum('aiq,ai->q',computeNOperator(self._nodesCoordinates,self._element,self._qpoints,self.nSpatialDimensions).squeeze(-1),dU[self.number_of_element_nodes:]).reshape((self._nInt, -1))
+        
+        print('compute_surface_grad', compute_surface_grad(self._nodesCoordinates,self._element,self._qpoints,self._nInt,self.nSpatialDimensions).shape)
+        print('dU', dU[:self.number_of_element_nodes].shape)
+        #print('result', np.einsum('aijq,ai->qij',compute_surface_grad(self._nodesCoordinates,self._element,self._qpoints,self._nInt, self.nSpatialDimensions),dU[:self.number_of_element_nodes]))
+        print('self._dSurface_strain_GPs',self._dSurface_strain_GPs.shape)
+        #self._dSurface_strain_GPs[:,:self.number_of_top_strain_comp] = np.einsum('aijq,ai->qij',compute_surface_grad(self._nodesCoordinates,self._element,self._qpoints, self._nInt,self.nSpatialDimensions),dU[:self.number_of_element_nodes]).reshape((self._nInt, -1))
+        #self._dSurface_strain_GPs[:,self.number_of_top_strain_comp:] = np.einsum('aijq,ai->qij',compute_surface_grad(self._nodesCoordinates,self._element,self._qpoints, self._nInt,self.nSpatialDimensions),dU[:self.number_of_element_nodes]).reshape((self._nInt, -1))
         
         for i in range(self._nInt):
             # get stress and strain
@@ -804,10 +821,11 @@ class InterfaceElement(BaseElement):
         return self._nodesCoordinates @ N
         
 def main():
-    interface_element = InterfaceElement('ILine2R',0)
+    #interface_element = InterfaceElement('ILine3',0)
+    interface_element = InterfaceElement('IQuad9R',0)
     
-    nodes = np.array([[0.0, 0.0],
-                    [1.0, 1.0]])
+    #nodes = np.array([[0.0, 0.0],
+    #                [1.0, 1.0]])
 
     #nodes = np.array([[0.0, 0.0],
     #                  [2.0, 0.0],
@@ -817,6 +835,19 @@ def main():
     #                 [0.0, 1.0, 0.0],
     #                 [1.0, 1.0, 0.0],
     #                 [1.0, 0.0, 0.0]])
+
+    nodes = np.array([
+                     [0.0, 0.0, 0.0],
+                     [0.0, 1.0, 0.0],
+                     [1.0, 1.0, 0.0],
+                     [1.0, 0.0, 0.0],
+                     [0.5, 0.0, 0.0],
+                     [0.0, 0.5, 0.0],
+                     [0.5, 1.0, 0.0],
+                     [1.0, 0.5, 0.0],
+                     [0.5, 0.5, 0.0]
+                     ])
+
 
     interface_element._nodesCoordinates = nodes
 
@@ -835,6 +866,9 @@ def main():
     dU_nodes = np.ones(interface_element.nDof) * 3 # the element contains 6 nodes 3 top 3 bottom with dofs per node eq to the spatialdimension i.e 12 in total
     dU_nodes[int(dU_nodes.shape[0]//2):] = -1*dU_nodes[int(dU_nodes.shape[0]//2):]
     
+    print('P_nodes',P_nodes.shape) 
+    print('U_nodes', U_nodes.shape)
+    print('dU_nodes', dU_nodes.shape)
 
     K = np.random.rand(interface_element._nDof,interface_element._nDof)
     K = np.einsum('jk,ik->ij',K ,K.transpose((1,0))) # create a positive definite matrix to avoid singularities
