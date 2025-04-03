@@ -1,0 +1,712 @@
+[33m377bad8[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmaster[m[33m, [m[1;31morigin/master[m[33m)[m Merge branch 'master' of github.com:AlexSTA-collab/EdelweissFE
+[33mf75e785[m added interfaceelement
+[33mc061072[m updated version
+[33ma1b33fe[m Merge branch 'master' of git.uibk.ac.at:c8441141/EdelweissFE
+[33mab733a3[m added customized increase factor to timestepper
+[33mfd44669[m temporarily deactivated test for analytical fields from vtk
+[33m58f1ed7[m Merge branch 'master' of git.uibk.ac.at:c8441141/EdelweissFE
+[33m835c370[m fix ensight output
+[33m7e2d262[m Merge branch 'matthias/minor_redesign_adaptive_timestepper'
+[33m52bba61[m Merge branch 'matthias/minor_redesign_adaptive_timestepper' into 'master'
+[33m18cdf2c[m Matthias/minor redesign adaptive timestepper
+[33mb5f68f1[m cleaner design of adaptive time stepper, fixed Gosford test
+[33md8998f4[m minor cleanup in adaptive timestepper
+[33m25cc9b8[m minor improvement in adaptive time stepper
+[33m8b1ce49[m Merge branch 'matthias/restart' into 'master'
+[33mb965f90[m Matthias/restart
+[33m7c5a8a1[m Merge branch 'matthias/node_coupling_entity_base' into 'master'
+[33m9c904d7[m Matthias/node coupling entity base
+[33m59a0951[m Merge branch 'alex/fix_some_test_reference_solutions' into 'master'
+[33m363a664[m Merge branch 'alex/ensight_close_file_handles' into 'master'
+[33m257d8ab[m always close ensight files after writing
+[33m9e69f27[m Merge branch 'daniel/changebasematerial' into 'master'
+[33m472088f[m Daniel/changebasematerial
+[33m1f65db5[m Merge branch 'daniel/displacementelement' into 'master'
+[33m37834ea[m Daniel/displacementelement
+[33me7dc247[m fix reference solutions for tests using the linearized rigid body constraint
+[33m88a84f4[m Merge branch 'linearizedRigidBody3d' into 'master'
+[33m6ce4c03[m Linearized rigid body 3d
+[33m42b5ca1[m added vtk to requirements
+[33m62e990e[m added vtk to requirements
+[33ma0ef31a[m temp. disabled klu and mumps test
+[33m90e3d10[m temp. disable petsc and mumps from requirements.txt
+[33ma0b65c8[m Merge branch 'master' of git.uibk.ac.at:c8441141/EdelweissFE
+[33m112eb41[m temp. disable petsc and mumps from requirements.txt
+[33maa7ded7[m Merge branch '30-node-parsing-with-nset-option-is-not-working-correctly-atm' into 'master'
+[33m83b8d4e[m fix for broken *node parsing with nSet=... option
+[33m272866a[m Merge branch 'alex/fix_rigid_body_constraint' into 'master'
+[33m75a956c[m enforce slave nodes to be a list
+[33m2b844be[m merge github/master
+[33me303755[m Merge branch 'matthias/improvements_for_cell_elements' into 'master'
+[33md96e169[m Matthias/improvements for cell elements
+[33mfb1627a[m Merge branch 'alex/gitlab-pipeline' into 'master'
+[33m17ecb84[m fix autoflake in gitlab pipeline
+[33m6dcb393[m configure autoflake to remove all unused imports
+[33m8ea1cc9[m Merge branch 'alex/add_flake8_and_isort' into 'master'
+[33m70eeffc[m Alex/add flake8 and isort
+[33ma1a631f[m Merge branch 'paul/dev' into 'master'
+[33m404882e[m AnalyticalFields FromVtk
+[33m582faeb[m mini changes to reference solution
+[33ma2055d0[m fixed wrong ordering due to set comparison;
+[33m90d7c02[m bugfix in linearizedRigidBody constraint
+[33m05fd53b[m slave node set should be properly converted to list!
+[33m4b0b77c[m Merge branch 'origin/24-analyticalfieldsrandomscalar-not-working-correctly-for-plane-elements' into 'master'
+[33mcafc1d8[m fix for numpy deprecation warning
+[33m118f23b[m Merge branch 'origin/15-handle-elements-with-no-or-multiple-section-assignment-s' into 'master'
+[33m97e8c71[m Merge branch 'master' into origin/15-handle-elements-with-no-or-multiple-section-assignment-s
+[33m8ced6d9[m Merge branch '24-analyticalfieldsrandomscalar-not-working-correctly-for-plane-elements' into 'master'
+[33m0f2d633[m this was necessary due to recent changes
+[33mf8473b0[m case insensitive options for randomscalar field
+[33m0d912a8[m changed how gstools field is evaluated to rule out unexpected behavior
+[33m265c9eb[m add exception for missing material assignment
+[33md159ece[m add element property .hasMaterial
+[33mc4fddd3[m Merge branch 'paul/bugfix' into 'master'
+[33m9fdf63e[m Paul/bugfix
+[33mfe59b5b[m Merge pull request #3 from EdelweissFE/matthias/update_github_pipeline
+[33m1e2b330[m minor improvements in gh ci
+[33m4013b13[m replace fe by edelweissfe in arc length solver
+[33m810c9dd[m fix csr setup for scipy 1.13.0
+[33m2daf8ae[m Merge branch 'alex/improve_tests' into 'master'
+[33me1cc639[m Alex/improve tests
+[33m3a5d8d9[m Merge branch 'alex/extend_linear_solvers' into 'master'
+[33m90c9860[m Alex/extend linear solver interfaces
+[33m13aa186[m fixed linting
+[33m5f5cdae[m renamed package in doc
+[33mc4e76be[m minor fix in doc
+[33m919624b[m Merge remote-tracking branch 'origin/master'
+[33m5552d56[m Merge branch 'alex/rename_package' into 'master'
+[33m4b0803d[m Alex/rename package
+[33m67e4555[m fixed doc
+[33m5e90a41[m updated installation instructions and github ci
+[33mfd7b48c[m fixed formatting
+[33m6360595[m real fix for PenaltyIndirectDisplacementControl test
+[33m0dc9d52[m Merge branch 'master' into matthias/mpm_changes_november_23
+[33mdba3c93[m fixed example
+[33m8391be9[m Merge branch 'master' of git.uibk.ac.at:c8441141/EdelweissFE into matthias/mpm_changes_november_23
+[33mc837698[m quick fix for use of solid section with wrapper elements
+[33m22c25cb[m test updated to reflect changes to CDP implementation
+[33mda225d2[m Merge branch 'paul/sectionUpdate' into 'master'
+[33m4bca58a[m Paul/section update
+[33ma8d9a2a[m Merge remote-tracking branch 'origin/master' into matthias/mpm_changes_november_23
+[33m06052df[m minor changes
+[33md05f8c2[m Merge branch 'paul/reworkSolverDefinition' into 'master'
+[33m4a19151[m Improve handling of solver definitions
+[33m5db0619[m removed trailing spaces in ensight output
+[33m8a77d92[m Merge branch 'paul/dictKeysAsSets' into 'master'
+[33m67889e0[m fieldVariable object improvements; indirect control bugfix
+[33mc330826[m bugfix
+[33m5eb51db[m new test for indirect displacement control
+[33mc3b67ad[m added some sets
+[33m6ac183c[m added file capabilities to journal
+[33m27ccd51[m minor changes; improvements in performance timing
+[33m763608f[m added some remarks; changed label to name
+[33mb05514c[m added performance timer!
+[33m15bfb58[m _nodes attr should be of type list; some nodes may appear multiple times
+[33me1ffddd[m fixed .inp issues in arc length control
+[33m82e5b1b[m fixed .inp issues in arc length control
+[33m04f7254[m adapting indirect control to new field system
+[33m4ed6f24[m finally introduced a dedicated TimeStep!
+[33m4057eaa[m enhancements ensight output
+[33m9ea03dc[m - minor redesign of dofmanager - fix in ensight - new subfolder for timesteppers; renamed IncrementGenerator to AdaptiveTimeStepper
+[33m87566c2[m removed unneccessary import
+[33m78ac2b9[m changes for immutable sets
+[33m1b185e4[m added immutable version of OrderedSet
+[33m27060e4[m added name attribute
+[33m6fac4db[m bool operations return sets instead of OrderedSets
+[33mcf5bedc[m wip; implementation of an ordered set using dict keys to store items
+[33m5511535[m ensuring that indices in dofmanager are int
+[33m9e707ea[m Merge branch 'matthias/refactoring_for_mpm' into 'master'
+[33m0ce3722[m Matthias/refactoring for mpm
+[33m15143df[m Merge branch 'master' into paul/updateToAnalyticalFields
+[33m5dcebc2[m added exception handling for StepFailed exception
+[33m42513eb[m removed fe/sections/base/randomfieldbase.py
+[33m62449d6[m fields are now evaluated at quadrature point coordinates
+[33m0907efa[m hotfix for overwritten elements
+[33mba67e8e[m added element set <name>_all
+[33mda071ee[m make available new marmot element functionality; methods getCoordinatesAtQuadraturePoints getNumberOfQuadraturePoints
+[33mdeb890c[m Merge branch 'paul/csv_output_for_each_increment' into 'master'
+[33m89968f4[m csv output for each converged increment
+[33m2ccac25[m update black version
+[33md5c49d7[m fix unhandled exceptions
+[33ma37d0dc[m extended functionality of setfield step action to vector fields
+[33mac46152[m test now tests setfield stepaction
+[33m92a641d[m bugfix
+[33mcd57f1b[m add _materialProperties attribute to MarmotMaterialWrappingElement
+[33m7edc5e7[m bugfix
+[33m8145cd7[m apply nodeforces incrementally
+[33m0270110[m bugfix; multiple field output definitions are now read correctly
+[33mc421cad[m Better handling for failed steps
+[33m0ecdd8b[m fixed formatting
+[33m6f70b45[m fix in MeshPlot
+[33md01d5c9[m adaption to decentralized marmot reg system
+[33m57f7ea2[m Merge branch 'matthias/separation_inputfile'
+[33mba433d2[m fix for meshplot
+[33m7af526d[m check if dirichlets exist before applying
+[33m4dcfb7e[m fix in fieldoutput
+[33m3cb7664[m further separation improvements
+[33mcca3bd1[m fixes in two tests
+[33m59b87e1[m started on separating the inputfile from the code framework
+[33m65ea095[m Merge branch 'matthias/mpm' into 'master'
+[33m7f3917e[m Matthias/mpm
+[33m9db2086[m bugfix
+[33md63bb28[m Update .gitlab-ci.yml file
+[33m3c09bd1[m call parser.print_help() and exit if Edelweiss is executed without input arguments
+[33m957a91f[m Merge branch 'ensightNodeSets' into 'master'
+[33m716117e[m export node sets to EnSight
+[33mf050d65[m Update .gitlab-ci.yml file
+[33m024eb00[m added missing node sets for edges and vertices
+[33m8c44ef7[m fixed case insensitivity for *include keyword
+[33m83dc211[m added checks for assigned material in marmot elements
+[33me4edc1c[m fix in residual header
+[33m998eb5f[m Merge branch 'master' of github.com:EdelweissFE/EdelweissFE
+[33m509c08a[m updated formatting
+[33m1e2dc94[m Merge pull request #2 from EdelweissFE/matthias/winkler_example
+[33mc117945[m adapter to new black formatting
+[33m861dd2b[m added winker example
+[33mb224c8a[m Merge branch 'matthias/remove_deprecated_numpy_types' into 'master'
+[33m77978f3[m Matthias/remove deprecated numpy types
+[33md157331[m fix cutback request in marmot material wrappers
+[33m058cb5a[m Merge branch 'alex/increment_wise_time_monitor' into 'master'
+[33m2fdd174[m add new outputmanager for compute time analysis
+[33mfb9fe71[m Merge remote-tracking branch 'origin/master'
+[33m57b4d45[m add missing .rst file for sets
+[33md419626[m updated publications
+[33mf99c38a[m Merge branch 'matthias/fix_settings_extropolation'
+[33m630915d[m fix exception propagation in marmot single qp materials
+[33mc7cd350[m fix extrapolation settings
+[33mfacf46b[m bugfix conditional stop outputmanger
+[33mc6d6bd7[m Merge branch 'alex/singleqp_gradient_enhanced_hypoelastic' into 'master'
+[33m82f110f[m Alex/singleqp gradient enhanced hypoelastic
+[33m8567315[m add possibility to prescribe size of the start increment in a step
+[33m2b033c1[m Merge branch 'alex/mesh_generators_export' into 'master'
+[33mf79f83e[m remove jobName keyword for MeshDataToFileFromBoxGen test
+[33m8ce1ef0[m add documentation
+[33m8d842b8[m add missing nodeset.py
+[33m83183fb[m change to new orderedset class for elementset and nodeset
+[33m104b436[m fix ordering dependent usage of nSet for constraints and plotalongpath
+[33m20882cb[m resolve merge conflicts
+[33md37623b[m add functionality for nodeset to be sorted by label
+[33m22f3dd8[m Merge branch 'matthias/rename_modelInfo_to_model' into 'master'
+[33med5fdeb[m Rename the widely used modelInfo!
+[33m5a62a7d[m add nodeset object including respective changes; tests NOT running for some constraints
+[33m02d8119[m added and updated testfiles
+[33m4a1fee1[m Merge branch 'paul/bugfix' into 'master'
+[33mf3fd701[m bugfix to get material state vars
+[33ma4af259[m bugfix to get correct result history for vector quantities
+[33m46f7a32[m add ElementSet object
+[33m767cdf5[m add outputmanager for mesh data; add ElementSet object
+[33md3195ae[m Merge branch 'matthias/get_rid_of_jobName_options' into 'master'
+[33m0096ed1[m tidied up code
+[33m8f3664f[m removed jobName option in all keywords in testfiles; removed trailing commas in testfiles
+[33me9d7fd5[m Merge branch 'master' into matthias/get_rid_of_jobName_options
+[33m1fe27e6[m added test.inp for PlaneMaterialParameterFromField
+[33maa69cd3[m hotfix for cython compile error due to bug in cython 0.29.xx associated with 'range' typing of argument quadraturePoints
+[33m731fc37[m Removed requirement for jobName specification in several keywords and added deprecation warning; adapted inputfiles accordingly
+[33m94fc4e3[m Merge branch 'matthias/converge_check_scalar_variables' into 'master'
+[33m3306348[m Matthias/converge check scalar variables
+[33m6050176[m Merge branch 'matthias/refactoring_constraint_system' into 'master'
+[33me2d8ea8[m Matthias/refactoring constraint system
+[33me0848db[m extended doc and examples
+[33m076ee3d[m Merge branch 'matthias/python_code_model_generator' into 'master'
+[33m683f62a[m Matthias/python code model generator
+[33m19b7179[m Merge branch 'matthias/remove_early_casting_of_datalines' into 'master'
+[33m5aacada[m Matthias/remove early casting of datalines
+[33m47bee44[m Merge branch 'journal_extension' into 'master'
+[33m88d6e1a[m status monitor
+[33mc3cf677[m added doc for materials
+[33m1aede1f[m fix in type checking
+[33mc4568cd[m added utils to doc
+[33m947f6cf[m Merge branch 'matthias/syntax_highlighting_for_doc' into 'master'
+[33md716a55[m Matthias/syntax highlighting for doc
+[33mddefdad[m Merge branch 'matthias/single_qp_element' into 'master'
+[33m9726230[m Implemented a new single quadrature point element for MarmotMateirals
+[33maf4cc90[m reformatted distributed load
+[33m0804907[m Merge remote-tracking branch 'origin/master'
+[33m39901fe[m fix in find closest node
+[33m49a3852[m added load type parameter t odoc
+[33m1920876[m added example for surface traction
+[33mc2e55a4[m updated doc for analytical fields
+[33m99c1413[m added doc for analytical fields
+[33m1bcb369[m some renaming and fixing of typos
+[33ma40ed2d[m adapted test to new clean red wildmoor material
+[33m0c04daa[m reducing num mat parameters
+[33mae0eb6e[m Merge remote-tracking branch 'origin/master'
+[33mfaea1a6[m added testfiles for red wildmoor sandstone
+[33m6958ab5[m reformatted edelweiss.py
+[33m69d0772[m added link to badge for doc
+[33m438ee54[m some fixed typos in the doc; some minor improvements
+[33m710ffa3[m fixed formatting
+[33madf4fb7[m Merge branch 'matthias/update_penalty_indirect_control' into 'master'
+[33m1f0af65[m Matthias/update penalty indirect control
+[33m0d8105a[m Merge branch 'paulFeature' into 'master'
+[33m168e63e[m empty lines and comments are now definitely ignored during parsing; previously...
+[33m5f0dd63[m Merge branch 'matthias/black_formatting_gitlab_ci' into 'master'
+[33mcc3bd83[m Matthias/black formatting gitlab ci
+[33mdcee74b[m Merge branch 'master' of git.uibk.ac.at:c8441141/EdelweissFE
+[33ma3add84[m Merge branch 'matthias/schlangen_test' into 'master'
+[33mc852ffa[m Matthias/schlangen test
+[33m1a41325[m Merge branch 'solidParametersFromField' into 'master'
+[33m2426616[m optional keywords for materialParameterFromField option type=... and...
+[33m9f91d39[m fixed typos
+[33mdd8b0a8[m added doc for findclosestnode
+[33m978174d[m added find closest node functionality
+[33m6e6b091[m centered image
+[33m29cbd7c[m added gif
+[33mc1842bf[m changed black line length to 120 characters
+[33mf464d0b[m added badges, added lint workflow
+[33mb88ffcc[m made doc URL case sensitive
+[33me0071ed[m added missing finite element base
+[33mbd7d3a7[m Updates in doc; updates in README
+[33mbbdfca9[m updated doc
+[33m00ce05c[m added penalty indirect control test files
+[33m111313a[m updated change material property functionality
+[33me2a1e2d[m Merge branch 'matthias/change_material_properties'
+[33m9c48c2b[m Merge branch 'update_constraint_system'
+[33mf549dda[m minor fix
+[33m6fb047d[m Some cleanup; Improved doc
+[33m4fcc62e[m some rearrangements of variables
+[33m1dd5379[m updated documentation
+[33m1689214[m added scalar variable
+[33m29e1cab[m refactored stepaction base; added doc
+[33mc0fb26f[m improved penalty based constraint
+[33md26e030[m proper python formatting
+[33mf6296c4[m Completely refactored constraint system
+[33m533b01e[m fixed typos
+[33m5d1a0c3[m added possibilty to change material properties
+[33m448a9e1[m fixed syntax; updated gitlabs-ci
+[33m9bc79e5[m added doi role to doc
+[33m41c2463[m clean up in testfiles
+[33m6cd6fdc[m updates in doc
+[33m1feb5f6[m refined latex check
+[33m3beb9a0[m added check if latex is available
+[33m805de29[m added make to requirements.txt
+[33m6cb6a9b[m minor update doc
+[33mf0f5a1b[m readded analyticalfields.base
+[33m11ac2f2[m Merge branch 'master' of git.uibk.ac.at:c8441141/EdelweissFE
+[33mc5f689d[m added requiresments.txt; updates in doc
+[33m4674688[m updated installation procedure doc
+[33ma0e63e1[m update on doc
+[33mba3814a[m updated doc
+[33m1ed66bb[m Update sphinx.yml
+[33m60f3c3e[m Update sphinx.yml
+[33m3500409[m Update sphinx.yml
+[33mab791b0[m Update sphinx.yml
+[33m2ccf8e7[m update workflow
+[33me6ea0a7[m Update sphinx.yml
+[33mae33fbb[m added github action for building sphinx
+[33m51d9881[m further improvements on documentation
+[33mdd148fa[m added VonMises test file; updated CosseratDruckerPrager test file
+[33m481c708[m further updates on doc
+[33mb077e7b[m updated doc
+[33m12e8ba1[m added initial version of sphinx doc
+[33m0fa4afa[m Merge branch 'reduced_output' into 'master'
+[33m483ac06[m added min DT for ensight output
+[33m619879e[m Merge branch 'dirichlet_field' into 'master'
+[33me5a4693[m Dirichlet field
+[33m2eaaa9a[m alphabetic sorting of tests
+[33m7cd6a8e[m Merge branch 'solid_rand_mat_props' into 'master'
+[33mba136e2[m solid random matrial properties
+[33m741f151[m added dependency gstools in reeadme
+[33m44475a8[m Merge branch 'random_field_thickness' into 'master'
+[33m9758723[m Refactored the handling of modelInfo; updated modelInfo is now always passed...
+[33m555c3cd[m added some set defs for boxGen
+[33m2ae6be6[m Merge branch 'boxGen' into 'master'
+[33m9994117[m boxGen
+[33ma761586[m Merge branch 'cubitModelGen' into 'master'
+[33m3986c11[m Cubit model gen
+[33m805397e[m added testfiles for GCSCDP, CosseratDruckerPrager and CosseratHoekBrown
+[33me7973f4[m adjusted CCPE8R to account for new CosseratDruckerPrager formulation
+[33mb8cf247[m Merge branch 'newSetDefs' into 'master'
+[33ma6ec6b5[m optimized code
+[33mee93aae[m removed unnecessary code
+[33me980f22[m optimizations; nodes and elements are not looped twice anymore
+[33m3abdb41[m added new test
+[33md31f2fb[m removed old test
+[33mc9a061d[m Merge branch 'master' of https://git.uibk.ac.at/c8441141/EdelweissFE into newSetDefs
+[33m90b0bed[m added testcase
+[33m6308ccb[m Merge branch 'master' of git.uibk.ac.at:c8441141/EdelweissFE
+[33m05c0499[m fixed testcases for previously erronous 2D geostatic pressure
+[33mdf6c7e1[m Merge branch 'element_surface_abaqus_compatiblity' into 'master'
+[33m327ff93[m allow surface definitions to be compatible with abaqus
+[33m8dd1637[m added possibility to define NSET in *NODE keyword and ELSET in *ELEMENT keyword
+[33mcef463b[m updated testing system; fixed meshplot test
+[33mf3c3e5d[m added testfiles for B4, SolidificationCDP, SolidificationModLeon
+[33m787ee47[m addded license file
+[33mb135117[m renamed validateEdelweiss
+[33m750f0f5[m renamed validateEdelweiss
+[33m12c4025[m fixed output
+[33m293d348[m Merge branch 'gosford_sandstone' into publication_ready
+[33m8e15206[m added comments
+[33ma3c47ac[m added gosford sansdstone examples
+[33m3f630dd[m fixed validation output
+[33m7186b48[m reformatted code
+[33mf72ee6c[m some minor corrections
+[33m3ede847[m added license headers
+[33mbcef7a2[m update in planerectquad gen
+[33m6a78e12[m Merge remote-tracking branch 'origin/master'
+[33mdacea5f[m added gmcdp coarse test file
+[33m67b694e[m Update README.md
+[33m15b6ca3[m small fix in fieldoutput and renaming ShotLeonV2NonLocalCreepTest test
+[33m3d56826[m replaced sdv result reques by actual result name in most testfiles; removed ParmeterFitting from testfiles
+[33md6f723e[m fix test GC3D20RMixed
+[33mcff4992[m test-file for GC3D20RMixed added
+[33m40f0ac4[m fix test meshPlot
+[33md490b7e[m fix porous elastic test
+[33md93b5a2[m flatten arrays for plotting
+[33m7ab572b[m fix typo
+[33mbcfb01e[m fix another deprecation warning
+[33mfc39225[m Merge branch 'master' of https://git.uibk.ac.at/c8441141/EdelweissFE
+[33mb64ece1[m fix deprecation warning
+[33m390a72d[m Merge branch 'kw16_next' into 'master'
+[33mcecdcd1[m Kw16 next
+[33m1b99b34[m Merge branch 'kw9_next'
+[33mfd11882[m Merge branch 'kw9_next' into 'master'
+[33ma3cd648[m added testfiles for CDP, LinerElasticShrinkage and LinearElasticSolidificationCreep materials
+[33m3874e06[m Added testfiles for GMCDPFiniteStrain (nearly) hydrostatic compression
+[33m73cbfde[m Created new U.ref in LinearElasticOrthotropic and LinearElasticTransverseIsotropic -> normalVector was read wrong before
+[33m33d9482[m Merge branch 'kw7_next' into 'master'
+[33m9b870cb[m renamed gauss points to more general quadrature points
+[33m57597fa[m renamed gauss points to more general quadrature points
+[33m2499b2d[m Merge branch 'master' of git.uibk.ac.at:c8441141/EdelweissFE
+[33me2e1e41[m Delete ensights ; minor changes in Ortho and TransIso
+[33m5de0fbd[m Merge branch 'kw6_next' into 'master'
+[33ma43aa0d[m Kw6 next
+[33mc150a1c[m .gitignore file added
+[33mbaa4dfe[m fix merge conflicts
+[33m86591ee[m mini clean-up
+[33mae6dfc3[m option for running/creating only specified tests enabled
+[33m4648d79[m reset Outputmanagers U.ref to old state
+[33m9009dae[m reset geostatic U.ref to old state
+[33mc0e1745[m Added single element test to validate generalized linear elastic model
+[33m1d560a6[m update testfiles for marmot changes
+[33m8e17bef[m Merge branch 'marmot_transition' of git.uibk.ac.at:c8441141/EdelweissFE into marmot_transition
+[33mcfb8ccb[m reduced computation times of most test examples; added colorful validation output (requires rich)
+[33m20019c5[m Merge branch 'marmot_transition'
+[33m627ac37[m removed 'Uel' from testfile names
+[33mbd9e6ec[m Merge branch 'marmot_transition'
+[33m9c246fc[m updated README
+[33m507e189[m t st:x:x Merge branch 'marmot_transition' of git.uibk.ac.at:c8441141/EdelweissFE into marmot_transition
+[33m08ac2b3[m install.py ordnerpfad
+[33m9edf19b[m Merge branch 'marmot_transition' of git.uibk.ac.at:c8441141/EdelweissFE into marmot_transition
+[33m2f2ab49[m changed install.py to setup.py; added improved setup instructions and mechanisms
+[33m15720d8[m adapted input files
+[33md6d8f38[m added some testfiles for shotcrete materials
+[33m27480bf[m added some testfiles for shotcrete materials
+[33m6ad685a[m defaulted non overwrite in ensight
+[33m2388518[m Merge branch 'master' of git.uibk.ac.at:c8441141/EdelweissFE into marmot_transition
+[33m1e4e6f4[m new test files
+[33m74f7c60[m Merge branch 'master' of git.uibk.ac.at:c8441141/EdelweissFE
+[33m98fe42e[m added option to create single solution files
+[33m6e138c8[m added 2 new testfiles
+[33mb95ff5f[m added element provider to *element; default=marmot
+[33mb7044e5[m added element provider to *element; default=marmot
+[33m050d3b3[m Further Transition to marmot
+[33m669aca8[m Merge branch 'master' of git.uibk.ac.at:c8441141/EdelweissFE
+[33ma230410[m Added PlaneStrainBiax testfiles for RDP, ORDP, HB, and JHB | Configuration, overwrite=yes in all Inputfiles
+[33m2444c1e[m working version with new marmot transition
+[33mcd7fc00[m Merge branch 'master' of git.uibk.ac.at:c8441141/EdelweissFE into master
+[33meb2236f[m added initalize material action
+[33md1c8319[m fixed to float conversion in plotter
+[33m267e86e[m improved journal
+[33m4632613[m added BftMaterialInitialization
+[33m0b0fe81[m fixed docstring
+[33m04287cb[m additional sets added
+[33m4aa1958[m Merge branch 'master' of git.uibk.ac.at:c8441141/EdelweissFE
+[33m53f15cf[m minor changes in meshplot
+[33m7527fc3[m added option for matplotlib-backend, and removed dpi settings from plotter
+[33m79f2dce[m Merge branch 'master' of git.uibk.ac.at:c8441141/EdelweissFE
+[33m9232a36[m added support for plot export with --noplot
+[33mf166794[m uelNonLocalMixed testfile modified --> output for nonlocal damage variable pending
+[33m47071d2[m bug in integral of xy-plot fixed
+[33mec6deb2[m overwrite option for ensight export added; usage: *output, type=ensight, jobName=cpe4job, name=esExport configuration, overwrite=y
+[33m06e2bdc[m Merge branch 'NewSoftwareComponentLayout'
+[33mded7f1a[m ready to merge
+[33mcc8257e[m added missing mesh in GMCDPPlaneStrain3D
+[33m9b6c267[m added triaxial test files
+[33m44e3088[m changed element to new software componenet layout
+[33mf5284ac[m test files for MCC and PorousElastic added
+[33m7dd4caf[m working version
+[33m09a55e6[m initial progress
+[33m745addd[m reset to correct testfile
+[33mbe11d06[m Cosserat implementation
+[33m8cc2f9f[m added proper exception handling for material assignment in BftElement
+[33mda6f3b0[m Completely revised all test examples
+[33mb6608a7[m reimplemented the old parallel solver
+[33m0a2943d[m Removed (unused) single element and single node outputs from fieldOutput and added an exception for enight export if fieldOutput is defined wrong
+[33m04d3198[m Merge branch 'master' of git.uibk.ac.at:c8441141/EdelweissFE
+[33m3009451[m cleaned up testfiles
+[33m70a21e5[m test files for barodesy and barodesyGradient added
+[33mdcf7d6c[m Merge branch 'master' of git.uibk.ac.at:c8441141/EdelweissFE
+[33mf0e6c79[m minor cleanup, improved testfiles, corrected .refs
+[33m0494f0f[m minifix in sdvini; warning in update stepactions name added
+[33mde01995[m initialize state variables added: sdvini, name=ini, elSet=all, sdv=0, val=0.7
+[33mf04c527[m Update README.md
+[33m5c592c5[m removed /usr/include/ from install.py for Eigen, since unpredictable behavior may occur in combination with Anaconda
+[33mf2663bf[m bugfix
+[33m37b79bb[m improved the dof pattern layout creation in dofmanager.py
+[33m67d2601[m bugfix in dofmanager
+[33mfafc225[m intermediate save
+[33md449563[m test files added for uelNonLocalMixed
+[33mc47d014[m updated testfiles
+[33m237cd38[m minor fixes
+[33m4710496[m minor cleanup
+[33m0f72fa4[m updated validation files
+[33m53ef522[m enhancements in BftUelProperty
+[33m2ec36fc[m minor cleanup
+[33m7db65d1[m successful implementation of dofmanager
+[33mfa3fb78[m Merge branch 'RefactoringNovember2018' of git.uibk.ac.at:c8441141/EdelweissFE into RefactoringNovember2018
+[33mf812285[m cleanup in rigidbody.py
+[33m21ef3ec[m added DofManager and VIJDatabase
+[33m4598d6d[m working version of rigid body
+[33mb76c446[m different approach
+[33m98a80d5[m progress on geom. nonlinear rigid body constraints
+[33mfd27630[m added dload3dlargestrain testfile
+[33md3938a5[m added dload largestrian testfile
+[33m0303d78[m working version
+[33mfa12df5[m fixed arclength solver: deadloads -> liveloads
+[33m1fc34d8[m Merge branch 'master' of git.uibk.ac.at:c8441141/EdelweissFE
+[33m34ba8a9[m added support for large strain
+[33m9fe077c[m minifix for body forces in nonlinearImplicitStaticParallelArcLength
+[33md64e9f6[m fix in csrgenerator: compatability(?) with latest cython release 0.29
+[33m4393b6b[m added missing bodyforce file
+[33m9838f39[m Merge branch 'master' of git.uibk.ac.at:c8441141/EdelweissFE
+[33m2da9476[m added support for body forces
+[33m38a0e4a[m small fix in plotter
+[33m1e63292[m removed export from meshplot (directly available via fieldoutput)
+[33m76dc52c[m re-added version 1 of the parallel solver for teaching purposes
+[33m23c24e0[m cleanuo
+[33m53f1dcd[m working version
+[33m946c8e8[m Merge branch 'Extension_Parallezation' into bftUel_getDofs_and_getNodeDofLayout
+[33m9910dbb[m cleanup
+[33md717983[m further progress
+[33m1c491d4[m Merge branch 'Extension_Parallezation' into bftUel_getDofs_and_getNodeDofLayout
+[33m5fbf17a[m added missing solver
+[33m32652be[m initial progress, not yet working
+[33m735324f[m added initial version of the MKII parallelsolver
+[33mff946a1[m update installation procedure
+[33m03ab8de[m Update README.md
+[33m574738f[m Merge branch 'master' of git.uibk.ac.at:c8441141/EdelweissFE
+[33mf718c70[m removed unnecessary file, improved install script
+[33m104da74[m Update README.md
+[33m674a89a[m Update README.md
+[33m044630a[m bugfix in geostatic; updated validation reference results
+[33m88243c3[m Adaption to new Interface
+[33m6bd9dc9[m further progress
+[33m07649fe[m working version
+[33md49dd7a[m Removed Math functions dependency on sympy due to issues with sympy 1.2 DeferredVector <-> numpy
+[33m3d60a8a[m added truss2, cleanup of testcases
+[33m08b8464[m update
+[33me79a7c3[m Merge branch 'master' of git.uibk.ac.at:c8441141/EdelweissFE
+[33m1c86c4d[m minor typo fix
+[33m98a1c6c[m added uelc320rnonlocal
+[33m2236477[m Merge branch 'IndirectDisplacementControl'
+[33m693277a[m Merge branch 'IndirectDisplacementControl' of git.uibk.ac.at:c8441141/EdelweissFE into IndirectDisplacementControl
+[33m3290461[m added "initializedcheck=Fasle" for buildEdelweiss.py, +bugfix
+[33mf61bf3d[m performance improvement
+[33m32f984a[m clean up
+[33mf429d80[m major performance improvements
+[33mb7a4154[m missing file
+[33m85eacf2[m working prototype
+[33m023532f[m removed erroneous file
+[33mb09673c[m clean version
+[33md7872a7[m working prototype
+[33m8ce38d0[m Merge branch 'master' of git.uibk.ac.at:c8441141/EdelweissFE
+[33m53265ae[m disabled own .csr() functionality, obsolete
+[33mad360fb[m Merge branch 'master' of git.uibk.ac.at:c8441141/EdelweissFE
+[33m7cca1bb[m Merge branch 'master' of git.uibk.ac.at:c8441141/EdelweissFE
+[33mb63de05[m * current length added to indirect displacement control to allow absolute definition * nodeforces/distributed loads: update of step added to account for cyclic behavior * finishStep: U and P as function arguments added
+[33m12d2ac9[m cleanup
+[33m6a16e26[m moved std "abq like" model generator to a separate constructor + clean up
+[33m0e95d6e[m Merge branch 'IndirectDisplacementControl'
+[33m2166dcc[m Merge branch 'master' of git.uibk.ac.at:c8441141/EdelweissFE
+[33m4321512[m Update stepaction indirect displacement control; overwritten __getitem__ in fieldoutputcontroller; fixed conditional stop in nonlinearimplicitstatic.py for successful finish of step; added write to csv option in plotXYdata;
+[33mf4ecc45[m Merge branch 'master' of git.uibk.ac.at:c8441141/EdelweissFE
+[33m70b3ca3[m fix meshplot for cpe8
+[33m156ec0f[m Merge branch 'master' of git.uibk.ac.at:c8441141/EdelweissFE
+[33mab053ea[m stages for plot value along path added
+[33me56bc0a[m added shearbands for model generator
+[33m6851277[m minor improvemetns and fixed extrapolation for arc length
+[33m3bbaf7a[m added show integral option in xyplot
+[33m74ede1c[m Merge branch 'Pardiso' of git.uibk.ac.at:c8441141/EdelweissFE into Pardiso
+[33m0d46e8e[m fixed pardiso for RHS matrices
+[33m145e6cc[m Merge branch 'Pardiso' of git.uibk.ac.at:c8441141/EdelweissFE into Pardiso
+[33m7084d56[m del err file
+[33m5ac9ec6[m minor improvements
+[33md025c04[m added missing init file
+[33mcbc4b65[m working standalone version
+[33m52d570d[m working standalone version
+[33ma9ae64a[m working prototype
+[33m18c6131[m minor imp
+[33mc610241[m Merge branch 'master' of git.uibk.ac.at:c8441141/EdelweissFE
+[33m713d7f3[m bugfix
+[33m6036b1f[m Merge branch 'IndirectDisplacementControl' of git.uibk.ac.at:c8441141/EdelweissFE into IndirectDisplacementControl
+[33m3786b7d[m auto cpu count
+[33mcdc5b81[m added scdp v2 nonlocal testfile
+[33m329a027[m fixed output at the end of analysis
+[33mee2e9ac[m added stricter standard tolerances
+[33m5c7d754[m missing __init__.py added
+[33m089a364[m clean, working version
+[33m4ec2230[m working version, cleanup up
+[33mce6c966[m further improvements
+[33m40358f5[m added testfile
+[33me64adc9[m working prototype
+[33mc51ddb0[m further improvements
+[33m2102924[m initial cleanup
+[33m2bd7f85[m major cleanup, working versions of EAS and new validation files
+[33m391cf5d[m added c3d8 eas9
+[33m4fcf088[m added EAS 9 testfile frame
+[33mc1c9f8f[m Merge branch 'ShotcreteShellMaster'
+[33m4f68313[m Merge branch 'ShotcreteShellMaster' of git.uibk.ac.at:c8441141/EdelweissFE into ShotcreteShellMaster
+[33m6d382da[m Merge branch 'EAS-Elements' of git.uibk.ac.at:c8441141/EdelweissFE into EAS-Elements
+[33m21e4bcd[m added missing caseinsensitivedict
+[33mf2f9fd1[m Merge branch 'EAS-Elements' of git.uibk.ac.at:c8441141/EdelweissFE into EAS-Elements
+[33mcb1690c[m added uelcpe8rnonlocal
+[33me974fd7[m Merge branch 'EAS-Elements' of git.uibk.ac.at:c8441141/EdelweissFE into EAS-Elements
+[33mbf58e3d[m improved validation
+[33m9bd8b7c[m updated validation
+[33m5ecb713[m added case insensitivity to all input DICTS, improved tolerances
+[33mbec1b10[m minifix in uelcpe8rnonlocal
+[33ma25973f[m Merge branch 'EAS-Elements' of git.uibk.ac.at:c8441141/EdelweissFE into EAS-Elements
+[33mb8dfb12[m minifix in fieldoutput
+[33m168561e[m Merge branch 'EAS-Elements' of git.uibk.ac.at:c8441141/EdelweissFE into EAS-Elements
+[33mdd48b31[m small, temporary bugfix for fieldoutput / field check
+[33m75e0251[m boolean operations added, nodesetplot for meshplot added
+[33m3c9de33[m added testfile
+[33m88481fc[m Merge branch 'EAS-Elements' of git.uibk.ac.at:c8441141/EdelweissFE into EAS-Elements
+[33m8267d14[m init prototype
+[33mb53e75c[m working transition
+[33m2563dba[m increased maxIter
+[33ma2f68d7[m working implementation + cleanup
+[33m624681d[m further improvements
+[33m648de0e[m missing file ..
+[33mb7329f1[m prototype
+[33m9fc0e2d[m minor cleanup
+[33m400958e[m minor cleanup
+[33maf00b1d[m Merge branch 'ShotcreteShellMaster' into abqConvergenceCheck
+[33m88d049d[m fixed NISTParallel
+[33mda756b2[m fixed NISTParallel
+[33m49d395d[m Merge branch 'ShotcreteShellMaster' of git.uibk.ac.at:c8441141/EdelweissFE into ShotcreteShellMaster
+[33m186c5a8[m cleanup
+[33mf4788d3[m cleanup
+[33m9f61cf2[m minor improvements
+[33m90983a6[m further improvements
+[33m42b9bac[m initial working prototype
+[33m10f2006[m min. cleanup bevor merging with bftMaterial
+[33m037bd3e[m prettier computation time output, improved solver import
+[33m193033a[m Postprocessing Updates:
+[33mdad4292[m minor bugfixing
+[33mba08303[m minor improvements
+[33m0f8fba5[m minor improvements
+[33mea139b3[m initial framework
+[33m378f5fa[m cleanup and added CPE8
+[33m128167b[m added faster version of csr conversion
+[33m1ef9ae9[m added cythonized applyDirichletOnK in NISTParallel
+[33ma028a50[m minor bugfixing, reimplemented VALIDATION
+[33m3c5a732[m Merge branch 'master' into bftMaterial
+[33m5913d59[m Merge branch 'master' of git.uibk.ac.at:c8441141/EdelweissFE
+[33mae74156[m working prototype
+[33m7884d1c[m disabled hardcoded weak elements
+[33m99c0bb4[m minor bugfix
+[33mb1445ff[m working prototype
+[33m1d3f060[m parameteridentification compatibility to new fieldoutput controller established
+[33m1cdc66c[m deformed/undeformed meshplot added; plotElementLabels added
+[33m952ed10[m merge deformed mesh plot
+[33m5f2e96e[m nodeCoordinates from elset added, deformed configuration added
+[33meb62749[m Improved plotting:
+[33m8fadd32[m cleanup and added documentation
+[33m5018cf0[m added lots of documentation
+[33maafcbc0[m nSet instead of elSet for perNodeVariables required for meshplot
+[33m6575ab0[m Merge branch 'master' of git.uibk.ac.at:c8441141/EdelweissFE
+[33mad7e448[m exception added
+[33m23e044c[m Merge branch 'master' of git.uibk.ac.at:c8441141/EdelweissFE into unifiedFieldOutput
+[33ma8a1e31[m added export for fieldOutputs
+[33m8d8b77f[m minor cleanup
+[33m181db0e[m fix plot of parameter identification
+[33mc2e6505[m enable/restore csv export
+[33m7e9c3ef[m fix parameterfitting
+[33m9056a6f[m Merge branch 'unifiedFieldOutput'
+[33m60cf39a[m Merge branch 'unifiedFieldOutput' of git.uibk.ac.at:c8441141/EdelweissFE into unifiedFieldOutput
+[33md30ee9a[m minor impr.
+[33mb338e13[m minor impr.
+[33m4060793[m minor impr.
+[33m58e0514[m uelcpe8nonlocal added
+[33mbbb58f3[m incrementgenerator execution added; meshplot: areaFill added; generateRectangle: weak zone added
+[33mc9276db[m added uelCPE8NonLocal
+[33m292d1ec[m added uelCPE4NonLocal
+[33m302ef51[m transition for 2 testfiles
+[33me947edc[m minor cleanup
+[33me7fdafa[m New, unified central fieldOutput system
+[33m0db8a4f[m uelcpe4nonlocal added
+[33mfcb8ff7[m module parameteridentification added
+[33m83329a1[m initial upload for parameterfitting
+[33m583245c[m Merge branch 'master' of git.uibk.ac.at:c8441141/EdelweissFE
+[33m76e1ec7[m minifix meshplot
+[33m1e4a3ab[m added a validation script
+[33m25e5fb6[m Merge branch 'master' of git.uibk.ac.at:c8441141/EdelweissFE into uelC3D8
+[33m610577a[m added 3d elements
+[33m20c6a52[m minifix meshplot
+[33m80688f6[m xy plot for nodal results added in meshplot outputmanager
+[33mdf13442[m Merge branch 'master' of git.uibk.ac.at:c8441141/EdelweissFE
+[33mf94623c[m added c3d8, added solid sections, cleanup
+[33ma1cd550[m fixed active geostatic, added docu geostatic, renamed ylateral to zlateral
+[33m9395db5[m update dirichlet stepactions
+[33madede6d[m added new doc functionality, cleanup, minor updates
+[33md9f6906[m cleaned up prototype
+[33m800e16e[m working prototype
+[33m8d9825a[m first progress, input framework added
+[33ma70a397[m minor cleanup
+[33m0fd09a2[m Working versions of dload, geostatic,
+[33me02f35e[m Major improvements:
+[33ma3e9cbb[m Improvements
+[33md35cb0f[m Major Improvements:
+[33m2dcd7ca[m minor imrpovements
+[33m8d48215[m Merge branch 'master' of git.uibk.ac.at:c8441141/EdelweissFE
+[33m4d4dfa1[m Again, Major redisgn of uelbaseelement
+[33m9802a28[m Again, Major redisgn of uelbaseelement
+[33m4894b23[m added framework for help and documentation
+[33m24b2efa[m adapted meshplot to new scheme
+[33m4e4a0e2[m major improvements:
+[33mb35845a[m improved ensight speed by permanent el result access
+[33mcee09f7[m performance timing
+[33m04a3ddd[m parallelization v2 working prototype
+[33mac09dae[m first prototype
+[33ma4f295a[m minor cleanup
+[33m0dd4769[m added plot along nset path prototype
+[33me8db631[m Merge branch 'Ensight'
+[33m5855d6d[m Merge branch 'inputFileParserExceptionManagement'
+[33m83d7daa[m successful migration the exception handled input file parser
+[33m7a9cbae[m Merge branch 'migrationUserLibrary'
+[33mfa7733d[m ensight puts var and geo files now in subdirectory
+[33md466572[m migrated plugin system to importlib -> no need for registration in fe/config/
+[33m61a9993[m working migration
+[33mdbe9e60[m ..
+[33ma93b1a5[m cps4 working prototype
+[33m512a24e[m Merge branch 'master' of git.uibk.ac.at:c8441141/EdelweissFE
+[33me614046[m Merge branch 'master' of git.uibk.ac.at:c8441141/EdelweissFE
+[33m9eae7b8[m Merge remote-tracking branch 'origin/customizablePhenomenaTolerances'
+[33m1f76416[m Merge branch 'modelGenerators'
+[33mf2bf7bc[m Merge branch 'master' of git.uibk.ac.at:c8441141/EdelweissFE
+[33m47e6e7a[m Improvements:
+[33m8fd0853[m Merge remote-tracking branch 'origin/customizablePhenomenaTolerances'
+[33me8998d6[m added time monitor
+[33m745d73f[m Merge branch 'master' of git.uibk.ac.at:c8441141/EdelweissFE
+[33m495a0ee[m added linearElastic umat
+[33m3bfb7d6[m added uelcps8nonlocal
+[33m51f8104[m added customizable settings
+[33m1f71929[m fixed uelCPS4NonLocal
+[33md25b8ee[m Merge branch 'ensightPersistentFileHandles' of git.uibk.ac.at:c8441141/EdelweissFE
+[33ma556407[m added persistent fileHandles
+[33m33c36fd[m Merge branch 'master' of git.uibk.ac.at:c8441141/EdelweissFE
+[33m2bf1882[m minor cleanup
+[33mea94b40[m  swap files deleted
+[33m3190523[m example for using mesh plots with matplotlib added
+[33m6cf3442[m initial upload of plotting mesh results using matplotlib, until now only results at the end of the job are available
+[33mdd3e6ae[m major improvements
+[33mecea3e7[m Major improvements:
+[33m3ab520d[m Merge branch 'master' of git.uibk.ac.at:c8441141/EdelweissFE
+[33m4cbf3eb[m New features!
+[33m9ab916b[m comments added, in applyDirichlet U deleted
+[33m9b5135f[m new features, minor updates
+[33m704e8ac[m minor cleanup
+[33m4118053[m added test files
+[33m685b09d[m working, clean prototype

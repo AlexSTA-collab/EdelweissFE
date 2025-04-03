@@ -36,7 +36,6 @@ sys.path.append('/home/alexsta1993/alexandros/EdelweissFE')
 from edelweissfe.elements.base.baseelement import BaseElement
 from edelweissfe.materials.marmotinterfacematerial.marmotinterfacematerialwrapper import MarmotInterfaceMaterialWrapper
 
-
 from edelweissfe.elements.interfaceelement.elementmatrices import (
     compute_grad,
     compute_surface_grad,
@@ -339,6 +338,7 @@ class InterfaceElement(BaseElement):
         self._matrixSize = properties["matSize"]
         self._activeVoigtIndices = properties["index"]
         self.planeStrain = properties["plStrain"]
+        
         if self.nSpatialDimensions >1:
             self._t = 1  # "thickness" for 3D elements
         self._fields = [["displacement"] for i in range(self._nNodes)]
@@ -588,7 +588,6 @@ class InterfaceElement(BaseElement):
             # These are computed at the begining of the analysis. Then we store them to the dsde matrix.
             # Their evolution is described by a return mapping algorithm (see Steimann and Mosler).
 
-
             if not self.planeStrain and self.nSpatialDimensions == 2:
                 raise Exception("Plain stress is not yet implemented in this element provider.")
                 # self.material.computePlaneStress(stress, self._dStressdStrain[i], self._dStrain[i], time, dTime)
@@ -623,7 +622,6 @@ class InterfaceElement(BaseElement):
             #print('J.T:\n', J.T.shape, '\n', J.T)
             #print(np.einsum('ij,jk->ik',J.T,J))
             #detJ = lin.det(np.einsum('ij,jk->ik',J.T,J)[:-1,:-1])  # Jacobi determinant
-
             # additional energy due to jump terms with H_inv_ij
             # get stiffness matrix for element j in point i
             K_jumpu_jumpv = assign_K_jumpu_jumpv(self.grad, Nbasis, H_inv_ij, i)
@@ -685,7 +683,6 @@ class InterfaceElement(BaseElement):
             
             print('Gauss points',i)
             print('detJ', detJ)
-
 
     def computeBodyForce(
         self,
@@ -822,6 +819,7 @@ def main():
     #                 [1.0, 0.0, 0.0]])
 
     interface_element._nodesCoordinates = nodes
+
     interface_element.initializeElement()
     
     E_M= 200.0; nu_M = 0.3; E_I = 200.0; nu_I = 0.3; E_0 = 200.0*0.1; nu_0 = 0.3\
@@ -846,6 +844,7 @@ def main():
     dTime = 0.1
 
     interface_element.computeYourself(P_nodes, K, U_nodes, dU_nodes.reshape((interface_element._nNodes,-1)), time, dTime)
+
 
 if __name__=="__main__":
     main()
