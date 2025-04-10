@@ -64,7 +64,12 @@ def getElementClass(provider: str = None) -> type:
         from edelweissfe.elements.displacementelement.element import DisplacementElement
 
         return DisplacementElement
+    
+    if  strCaseCmp(provider, "interfaceementelement"):
+        from edelweissfe.elements.interfaceelement.element import InterfaceElement
 
+        return InterfaceElement
+    
     if provider.lower() == "marmot":
         from edelweissfe.elements.marmotelement.element import MarmotElementWrapper
 

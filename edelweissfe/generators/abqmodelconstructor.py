@@ -251,8 +251,12 @@ class AbqModelConstructor:
                     "name": materialName,
                     "properties": materialProperties,
                 }
-            else:  # for DisplacementElement
-                model.materials[materialID] = materialClass(materialProperties)
+            
+            else:  # for DisplacementElement, InterfaceElement
+                if materialID == "ElasticInterfaceMaterial":
+                    model.materials[materialID] = materialClass(materialProperties, 0)
+                else:
+                    model.materials[materialID] = materialClass(materialProperties)
 
         return model
 

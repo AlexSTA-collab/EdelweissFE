@@ -110,7 +110,6 @@ def test_MarmotInterfaceMaterialWrapper():
 
     marmotMaterialInterfaceWrapper.computeStress(force, surface_stress, dStress_dStrain, dU, dSurface_strain, normal, timeOld, dT)
 
-
     
 
 

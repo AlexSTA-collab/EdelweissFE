@@ -56,7 +56,7 @@ class Section(SectionBase):
         element.initializeElement()
         # to make sure all elProviders work
         if not isinstance(material, dict):
-            element.setMaterial(material)
+                element.setMaterial(material)
         else:
             try:  # for Marmot
                 element.setMaterial(material["name"], material["properties"])
