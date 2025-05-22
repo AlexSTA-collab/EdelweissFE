@@ -12,7 +12,8 @@
 #  Unit of Strength of Materials and Structural Analysis
 #  University of Innsbruck,
 #  2017 - today
-#
+#  
+#  Alexandros Stathas
 #  Paul Hofer paul.hofer@uibk.ac.at
 #
 #  This file is part of EdelweissFE.
@@ -91,8 +92,8 @@ documentation = {
 def generateModelData(generatorDefinition: dict, model: FEModel, journal) -> dict:
     options = generatorDefinition["data"]
     options = convertLinesToStringDictionary(options)
-    #print(options)
-    name = generatorDefinition.get("name", "boxGen")
+
+    name = generatorDefinition.get("name", "interfaceGen")
 
     x0 = float(options.get("x0", 0.0))
     y0 = float(options.get("y0", 0.0))
@@ -104,7 +105,7 @@ def generateModelData(generatorDefinition: dict, model: FEModel, journal) -> dic
     nY = int(options.get("nY", 1))
     nZ = int(options.get("nZ", 1))
     elType = getElementClass(options.get("elProvider", None))
-    print('elType:', elType)
+
     testEl = elType(
         options["elType"],
         0,

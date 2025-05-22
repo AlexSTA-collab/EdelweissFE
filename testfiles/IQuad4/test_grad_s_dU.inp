@@ -1,0 +1,61 @@
+*node
+** Our  nodes
+** ID   coordinates
+0,      0,       0,      0
+1,  1.000,       0,      0
+2,  1.000,   1.000,      1
+3,      0,   1.000,      1
+4,      0,       0,      0.00001
+5,  1.000,       0,      0.00001
+6,  1.000,   1.000,      1.00001
+7,      0,   1.000,      1.00001
+
+
+*element, type=IQuad4, provider=interfaceelement
+** We create a single IQuad4 element
+** ID       node IDs
+1,      0,1,2,3,4,5,6,7
+
+*nSet, nSet = top_left
+0,3
+*nSet, nSet = top_right
+1,2
+
+*nSet, nSet = bottom_left 
+4,7
+*nSet, nSet = bottom_right 
+5,6
+
+*elSet, elSet=theOnlyElement
+1
+
+*material, name=marmotinterfacematerial, id=ElasticInterfaceMaterial, provider = edelweissmaterial
+** E_M, nu_M, E_I, nu_I, E_0 , nu_0, MaterialID 
+200.00001, 0.3, 200.00001, 0.3, 0.2, 0.3, 0
+
+*section, name=section1, material=ElasticInterfaceMaterial, type=solid
+all
+
+*job, name=IQuad4job, domain=3d
+*solver, solver=NIST, name=theSolver
+
+*fieldOutput
+create=perNode, elSet=theOnlyElement, field=displacement, result=U, name=displacement
+
+** create output data to open with paraview
+*output, type=ensight, name=IQuad4_elastic_interface
+create=perNode, fieldOutput=displacement
+
+configuration, overwrite=yes
+
+*step, solver=theSolver, maxInc=1e-1, minInc=1e-8, maxNumInc=1000, maxIter=25, stepLength=1
+options, category=NISTSolver, extrapolation=linear
+
+** bottom boundary
+dirichlet, name = bottom_left, nSet = bottom_left,  field=displacement, 1=1, 2=1, 3=0
+dirichlet, name = bottom_right, nSet = bottom_right,  field=displacement, 1=2, 2=2, 3=0
+
+** top boundary (by the same amount)
+dirichlet, name = top_left, nSet = top_left, field=displacement, 1=1, 2=1, 3=0
+dirichlet, name = top_right, nSet = top_right, field=displacement, 1=2, 2=2, 3=0
+

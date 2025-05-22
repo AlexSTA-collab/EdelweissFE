@@ -570,15 +570,31 @@ class DisplacementElement(BaseElement):
         self._stateVarsTemp = [self._stateVarsRef[i].copy() for i in range(self._nInt)].copy()
         # strain increment
         self._dStrain[:, self._activeVoigtIndices] = np.array([self.B[i] @ dU for i in range(self._nInt)])
+        
+        #if self._elNumber == 3:
+        #    print('Before Assembly')
+        #    print('P norm', np.linalg.norm(P,1))
+        #    print('K norm:', np.linalg.norm(K,1))
+        #    print('stateVars_norm:', np.linalg.norm(self._stateVarsTemp,1))
+        #    print('material stateVarsTemp:', np.linalg.norm(self._stateVarsTemp[-1][12:],1))
+        #    print('dStrain:', np.linalg.norm(self._dStrain,1))
+        
         for i in range(self._nInt):
             # get stress and strain
             stress = self._stateVarsTemp[i][0:6]
+            #print('Hexa element:\n', self._elNumber, i)
+            #print('Hexa stress before material:\n', stress)
             self.material.assignCurrentStateVars(self._stateVarsTemp[i][12:])
             # use 3D for 2D planeStrain
             if not self.planeStrain and self.nSpatialDimensions == 2:
                 self.material.computePlaneStress(stress, self._dStressdStrain[i], self._dStrain[i], time, dTime)
             else:
                 self.material.computeStress(stress, self._dStressdStrain[i], self._dStrain[i], time, dTime)
+                
+            #if self._elNumber == 3 and i==0:
+            #    print('After material calculation')
+            #    print('dStressdStrain', np.linalg.norm(self._dStressdStrain[i],1))           
+            
             # C material tangent
             C = self._dStressdStrain[i][self._matrixVoigtIndices][:, self._matrixVoigtIndices]
             # B operator
@@ -588,9 +604,21 @@ class DisplacementElement(BaseElement):
             # get stiffness matrix for element j in point i
             K += B.T @ C @ B * detJ * self._t * self._weight[i]
             # calculate P
+
+            #print('Hexa stress after material:\n', stress)
+            #print('Hexa P:\n', P)
             P -= B.T @ stress[self._activeVoigtIndices] * detJ * self._weight[i] * self._t
+            #print('Hexa P after assignment:\n', P)
             # update strain in stateVars
             self._stateVarsTemp[i][6:12] += self._dStrain[i]
+
+        #if self._elNumber == 3:
+            
+        #    print('After assembly')
+        #    print('P norm', np.linalg.norm(P,1))
+        #    print('K norm:', np.linalg.norm(K,1))
+        #    print('stateVars_norm:', np.linalg.norm(self._stateVarsTemp,1))
+        #    print('dStrain:', np.linalg.norm(self._dStrain,1))
 
     def computeBodyForce(
         self, P: np.ndarray, K: np.ndarray, load: np.ndarray, U: np.ndarray, time: np.ndarray, dTime: float

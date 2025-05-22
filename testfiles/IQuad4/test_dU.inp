@@ -1,0 +1,52 @@
+*node
+** Our  nodes
+** ID   coordinates
+0,      0,       0,      0
+1,  1.000,       0,      0
+2,  1.000,   1.000,      0
+3,      0,   1.000,      0
+4,      0,       0,      0.00001
+5,  1.000,       0,      0.00001
+6,  1.000,   1.000,      0.00001
+7,      0,   1.000,      0.00001
+
+
+*element, type=IQuad4, provider=interfaceelement
+** We create a single IQuad4 element
+** ID       node IDs
+1,      0,1,2,3,4,5,6,7
+
+*nSet, nSet = top
+0,1,2,3
+
+*nSet, nSet = bottom 
+4,5,6,7
+
+*elSet, elSet=theOnlyElement
+1
+
+*material, name=marmotinterfacematerial, id=ElasticInterfaceMaterial, provider = edelweissmaterial
+** E_M, nu_M, E_I, nu_I, E_0 , nu_0, MaterialID 
+200.0, 0.3, 200.0, 0.3, 1e6, 0.3, 0
+
+*section, name=section1, material=ElasticInterfaceMaterial, type=solid
+all
+
+*job, name=IQuad4job, domain=3d
+*solver, solver=NIST, name=theSolver
+
+*fieldOutput
+create=perNode, elSet=theOnlyElement, field=displacement, result=U, name=displacement
+
+** create output data to open with paraview
+*output, type=ensight, name=IQuad4_cohesive_element
+create=perNode, fieldOutput=displacement
+
+configuration, overwrite=yes
+
+*step, solver=theSolver, maxInc=1e-1, minInc=1e-8, maxNumInc=1000, maxIter=25, stepLength=1
+options, category=NISTSolver, extrapolation=linear
+dirichlet, name = bottom, nSet = bottom,  field=displacement, 1=-1, 2=-1, 3=0
+dirichlet, name = top, nSet = top, field=displacement, 1=2, 2=2, 3=0
+
+

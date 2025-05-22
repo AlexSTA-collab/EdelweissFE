@@ -65,9 +65,9 @@ def computeJacobian(x: np.ndarray, element, quad_points, dim: int):
     """
     # Define interface element and quadrature rule
     # keep only the unique nodal coordinates
-    print('x:\n', x)
 
     x = x[:,:int(x.shape[1]/2)].transpose(1,0)
+    #print('Nodal points:\n',x)
 
     if (dim-1) == 1:
 
@@ -96,13 +96,11 @@ def computeJacobian(x: np.ndarray, element, quad_points, dim: int):
 
         # Compute gradient matrices
         # (shape function derivatives at quadrature points)
-
         gradients = element.tabulate(1, quad_points)[1:] # we only keep one component because the element has the same dependence in xi,eta
 
         for qp in range(len(quad_points)):  # Loop over quadrature points
             dphi_dxi = gradients[0, qp, :, :]  # dφ/dξ for all nodes
             dphi_deta = gradients[1, qp, :, :]  # dφ/dη for all nodes
-            
             # Compute Jacobian matrix
             J = np.zeros((3, 2))
 
@@ -114,13 +112,6 @@ def computeJacobian(x: np.ndarray, element, quad_points, dim: int):
             J[2, 1] = np.einsum('i,ip->p', x[:, 2] , dphi_deta)[0]
 
             jacobians[qp] = J  # Store Jacobian for this quadrature point
-    #print('QUAD POINTS:\n', quad_points)
-    #print('shape functions', element.tabulate(0, quad_points))
-    print('gradients pure\n', element.tabulate(1, quad_points)[1:].shape)
-    #print('gradients.shape:', gradients.shape)
-    #print('reference gradients scalar case:\n',gradients)
-    #print('jacobians.shape:\n', jacobians.shape)
-    #print('jacobians', jacobians)
     return jacobians, gradients
 
 
@@ -144,7 +135,8 @@ def compute_grad(x: np.ndarray, element, quad_points, nInt: int, dim: int):
     """
 
     J_at_GPs, gradients = computeJacobian(x, element, quad_points, dim)
-
+    #print('jacobians:\n',J_at_GPs)
+    #print('gradients shape', gradients.shape)
     grad_phi_x_y_at_GPs_shape = np.append(J_at_GPs.shape[:2],gradients.shape[2:])
 
     grad_phi_x_y_at_GPs = np.zeros(grad_phi_x_y_at_GPs_shape)  # Shape (GP,node,dim)
@@ -160,20 +152,14 @@ def compute_grad(x: np.ndarray, element, quad_points, nInt: int, dim: int):
 
         G_inv = np.linalg.inv(G[qp])
 
-        J_pseudo_inverse_transpose = np.einsum('ij,jk->ik', J_at_GPs[qp], G_inv) 
+        J_pseudo_inverse_transpose = np.einsum('ij,jk->ik', J_at_GPs[qp], G_inv)
 
-        if dim == 2:
-
-            grad_phi_x_y_at_GPs[qp] = np.einsum(
-                "ij,jad->iad",J_pseudo_inverse_transpose, gradients[:,qp,:,:])    
-        elif dim == 3:
-
-            grad_phi_x_y_at_GPs[qp] = np.einsum('ij,jad->iad', J_pseudo_inverse_transpose, gradients[:,qp,:,:] )
+        
+        grad_phi_x_y_at_GPs[qp] = np.einsum('ij,jad->iad', J_pseudo_inverse_transpose, gradients[:,qp,:,:] )
                 
     grad_phi_x_y_at_GPs_stacked = np.repeat(
         grad_phi_x_y_at_GPs[np.newaxis, :, :, :], dim, axis=0
     )
-    
     return grad_phi_x_y_at_GPs_stacked, sqrt_detG
 
 
@@ -304,8 +290,10 @@ def interface_geometry(x: np.ndarray, element, quad_points, nInt: int, dim: int)
     increasing z)
     the normal is then stored at each GP as  [g_{,x}, g_{,y}, 1]
     """
-    grad_g = compute_grad(x, element, quad_points, nInt, dim)[0][0] # I only need one component
 
+    J_at_GPs, gradients = computeJacobian(x, element, quad_points, dim)
+
+    grad_g = compute_grad(x, element, quad_points, nInt, dim)[0][0] # I only need one component
     shape_functions_eval_at_quad_points = element.tabulate(0,quad_points)[0]
 
     normal = np.zeros((quad_points.shape[0],grad_g.shape[1]))
@@ -319,16 +307,13 @@ def interface_geometry(x: np.ndarray, element, quad_points, nInt: int, dim: int)
             normal[qp] = np.array([-tangents[0,1], tangents[0,0]]) #I take the normal to point upwards 
             
         else:
-            # General case (2D element in 3D, 3D element in 4D, etc.)
-
             tangents = np.einsum('ijk,jk->ik',grad_g[qp, :, :, :],  x[:,:int(x.shape[1]/2)].transpose(1,0)
 )  # Extract tangent vectors
-            
-            normal[qp] = np.cross(tangents[0],tangents[1])  # Cross product of the tangent vectors
+            normal[qp] = np.cross(tangents[:,0],tangents[:,1])  # Cross product of the tangent vectors
         
         if np.linalg.norm(normal[qp])>1e-16: #Avoid the zero vector
-            normal[qp] /= np.linalg.norm(normal[qp], keepdims=True) 
-    
+            normal[qp] /= np.linalg.norm(normal[qp], keepdims=True)
+
     N = np.einsum("qi,qj->ijq", normal, normal) #We keep the Gauss point dimension at the end to assure compatibility 
                                                 #with the other functions present in the material
     I = np.broadcast_to(np.eye(x[:,:int(x.shape[1]/2)].transpose(1,0).shape[1])[:, :, np.newaxis], N.shape)
@@ -338,110 +323,69 @@ def interface_geometry(x: np.ndarray, element, quad_points, nInt: int, dim: int)
     return normal, N, T
 
 # Assignment routines for the stiffness matrices of the finte element
+def calculate_N_jump(N,i):
+    #print('N shape:\n',N.shape)
+
+    N_matrix = np.zeros((N.shape[1],N.shape[0]*N.shape[1]))
+    #print(N_matrix.shape)
+    for ij in range(N_matrix.shape[0]):
+        for node_A in range(N.shape[0]):
+            for k in range(N.shape[1]):
+                Ak = node_A*N.shape[1]+k
+                if Ak == int(node_A*N.shape[1]+ij):
+                    #print('Node_A, ij, Ak:',node_A, ij, Ak)
+                    N_matrix[ij,Ak] = N[node_A, ij,0]
+
+    return N_matrix
+
 def assign_K_jumpu_jumpv(grad, Nbasis, H_inv_ij, i):
-
-    K_local_shape = grad.shape
-    K_local_dim = K_local_shape[0] * K_local_shape[3]#2
-    K_jumpu_jumpv = np.zeros((int(2 * K_local_dim), int(2 * K_local_dim)))
-    # We double the matrix beause we have double number of nodes side + side -
-
-    # We perform direct assignment
-    for node_A in range(K_local_shape[3]):
-        for node_B in range(K_local_shape[3]):
-            for component_i in range(K_local_shape[0]):
-                for component_j in range(K_local_shape[0]):
-                    A = int(node_A * K_local_shape[0] + component_i)
-                    B = int(node_B * K_local_shape[0] + component_j)
-
-                    K_jumpu_jumpv[A, B] = (
-                        Nbasis[node_A, component_i]
-                        * H_inv_ij[component_i, component_j]
-                        * Nbasis[node_B, component_j]
-                    )[0]
-
-                    K_jumpu_jumpv[A, K_local_dim + B] = (
-                        -Nbasis[node_A,component_i]
-                        * H_inv_ij[component_i, component_j]
-                        * Nbasis[node_B,component_j]
-                    )[0]
-
-                    K_jumpu_jumpv[K_local_dim + A, B] = (
-                        -Nbasis[node_A, component_i]
-                        * H_inv_ij[component_i, component_j]
-                        * Nbasis[node_B, component_j]
-                    )[0]
-
-                    K_jumpu_jumpv[K_local_dim + A, K_local_dim + B] = (
-                        Nbasis[node_A, component_i]
-                        * H_inv_ij[component_i, component_j]
-                        * Nbasis[node_B, component_j]
-                    )[0]
-
+    N_matrix = calculate_N_jump(Nbasis,i)
+    K_u1_v1 = np.einsum('im,mn,nj->ij', N_matrix.T, H_inv_ij, N_matrix)
+    K_jumpu_jumpv_up = np.hstack((K_u1_v1, -K_u1_v1))
+    K_jumpu_jumpv_down = np.hstack((-K_u1_v1,K_u1_v1))
+    K_jumpu_jumpv = np.vstack((K_jumpu_jumpv_up,K_jumpu_jumpv_down))
     return K_jumpu_jumpv
 
-
-def assign_K_grad_s_u_grad_s_v(grad, grad_s, Z_ijkl, i):
+def calculate_B_surface_grad(grad, grad_s):
 
     K_local_shape = grad.shape
-    K_local_dim = K_local_shape[0] * K_local_shape[3]# for line
 
-    K_grad_s_u_grad_s_v = np.zeros((int(2 * K_local_dim), int(2 * K_local_dim)))
+
+    B_matrix = np.zeros((K_local_shape[0]*K_local_shape[0], K_local_shape[0]*K_local_shape[3]))
     # We double the matrix beause we have double number of nodes side + side -
-    # We perform direct assignment
-    for node_A in range(K_local_shape[3]):
-        for node_B in range(K_local_shape[3]):
-            for component_i in range(K_local_shape[0]):
-                for component_k in range(K_local_shape[0]):
-                    A = int(node_A * K_local_shape[0] + component_i)
-                    B = int(node_B * K_local_shape[0] + component_k)
+    for ij in range(B_matrix.shape[0]):
+        for node_A in range(K_local_shape[3]):
+            for k in range(K_local_shape[0]):
+                Ak = node_A*K_local_shape[0]+k
+                if Ak == int(node_A*K_local_shape[0]+ij%3):
+                    B_matrix[ij,Ak] = grad_s.transpose((0,2,1))[node_A,int(ij//3),int(ij%3)]
+    return B_matrix
 
-                    K_grad_s_u_grad_s_v[A, B] = (
-                        1/ 4
-                        * np.einsum(
-                            "j, jl, l->",
-                            grad_s[node_A, :, component_i],
-                            Z_ijkl[component_i, :, component_k, :],
-                            grad_s[node_B, :, component_k],
+def assign_K_grad_s_u_grad_s_v(grad, grad_s, Z_ijkl, i):
+    B_matrix = calculate_B_surface_grad(grad, grad_s)
 
-                        )
-                    )
-
-                    K_grad_s_u_grad_s_v[A, K_local_dim + B] = (
-                        1
-                        / 4
-                        * np.einsum(
-                            "j, jl, l->",
-                            grad_s[node_A, :, component_i],
-                            Z_ijkl[component_i, :, component_k, :],
-                            grad_s[node_B, :, component_k],
-                        )
-                    )
-
-                    K_grad_s_u_grad_s_v[K_local_dim + A, B] = (
-                        1
-                        / 4
-                        * np.einsum(
-                            "j, jl, l->",
-                            grad_s[node_A, :, component_i],
-                            Z_ijkl[component_i, :, component_k, :],
-                            grad_s[node_B, :, component_k],
-                        )
-                    )
-
-                    K_grad_s_u_grad_s_v[K_local_dim + A, K_local_dim + B] = (
-                        1
-                        / 4
-                        * np.einsum(
-                            "j, jl, l->",
-                            grad_s[node_A, :, component_i],
-                            Z_ijkl[component_i, :, component_k, :],
-                            grad_s[node_B, :, component_k],
-                        )
-                    )
-
+    K_grad_s_u_grad_s_v = np.einsum('im,mn,nj->ij', B_matrix.T, Z_ijkl.reshape(9,9), B_matrix)
+    K_grad_s_u_grad_s_v = np.hstack((K_grad_s_u_grad_s_v, K_grad_s_u_grad_s_v))
+    K_grad_s_u_grad_s_v = np.vstack((K_grad_s_u_grad_s_v,K_grad_s_u_grad_s_v))
+    K_grad_s_u_grad_s_v = 1./4. * K_grad_s_u_grad_s_v
     return K_grad_s_u_grad_s_v
 
+def assign_P_jumpv(grad, Nbasis, force, i):
+    N_matrix = calculate_N_jump(Nbasis,i)
+    P_v = np.einsum('im,mj->ij', N_matrix.T, force.reshape(3,1))
+    P_jumpv = np.vstack((P_v, -P_v))
 
+    return P_jumpv
+
+def assign_P_grad_s_v(grad, grad_s, surface_stress, i):
+    B_matrix = calculate_B_surface_grad(grad, grad_s)
+    P_grad_s_v = np.einsum('im,mj->ij', B_matrix.T, surface_stress.reshape(9,1))
+    P_grad_s_v = np.vstack((P_grad_s_v, P_grad_s_v))
+
+    P_grad_s_v = 1./2.* P_grad_s_v
+    return P_grad_s_v
+
+#### Deprecated
 def assign_K_jump_u_grad_s_v(grad, grad_s, Nbasis, H_inv_nF_ijk, i):
 
     K_local_shape = grad.shape
@@ -551,53 +495,3 @@ def assign_K_grad_s_u_jump_v(grad, grad_s, Nbasis, H_inv_nF_ijk, i):
     return K_grad_s_u_jump_v
 
 
-def assign_P_jumpv(grad, N, force, i):
-
-    P_local_shape = grad.shape
-    P_local_dim = P_local_shape[0] * P_local_shape[3]
-
-    P_jumpv = np.zeros((int(2 * P_local_dim), 1))
-    # We double the matrix beause we have double number of nodes side + side -
-
-    for node_A in range(P_local_shape[3]):
-        for component_i in range(P_local_shape[0]):
-            A = int(node_A * P_local_shape[0] + component_i)
-            P_jumpv[A] = N[node_A, component_i] * force[component_i]
-            P_jumpv[P_local_dim + A] = (
-                -N[node_A, component_i] * force[component_i]
-            )
-
-    return P_jumpv
-
-
-def assign_P_grad_s_v(grad, grad_s, surface_stress, i):
-
-    P_local_shape = grad.shape
-    P_local_dim = P_local_shape[0] * P_local_shape[3]
-    P_grad_s_v = np.zeros((int(2 * P_local_dim), 1))
-    # We double the matrix beause we have double number of nodes side + side -
-
-    for node_A in range(P_local_shape[3]):
-        for component_i in range(P_local_shape[0]):
-            A = int(node_A * P_local_shape[0] + component_i)
-
-            P_grad_s_v[A] = (
-                1/ 2
-                * np.einsum(
-                    "j,j->",
-                    grad_s[node_A, :, component_i],
-                    surface_stress[component_i, :],
-                )
-            )
-
-            P_grad_s_v[P_local_dim + A] = (
-                1
-                / 2
-                * np.einsum(
-                    "j,j->",
-                    grad_s[node_A, :, component_i],
-                    surface_stress[component_i, :],
-                )
-            )
-
-    return P_grad_s_v

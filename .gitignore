@@ -1,3 +1,6 @@
+edelweissfe/elements/interfaceelement/Older_versions
+testfiles/IQuad4/Old/
+testfiles/IQuad4/*.csv
 *.vtu
 *.pvtu
 *.case

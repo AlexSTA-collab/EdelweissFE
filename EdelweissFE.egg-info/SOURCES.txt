@@ -65,6 +65,7 @@ edelweissfe/generators/boxgen.py
 edelweissfe/generators/cubit.py
 edelweissfe/generators/executepythoncode.py
 edelweissfe/generators/findclosestnode.py
+edelweissfe/generators/interfacegen.py
 edelweissfe/generators/planerectquad.py
 edelweissfe/helpers/__init__.py
 edelweissfe/helpers/inputfilehelpers.py

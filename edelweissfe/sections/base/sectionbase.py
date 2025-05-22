@@ -79,7 +79,7 @@ class Section(ABC):
                 self.materialPropertiesFileName = definition.get("filename")
             else:
                 elSetNames.extend(line)
-
+         
         self.elSets = [model.elementSets[setName] for setName in elSetNames]
         self.material = model.materials[materialName]
 
