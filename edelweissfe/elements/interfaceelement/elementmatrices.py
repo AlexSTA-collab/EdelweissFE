@@ -196,9 +196,10 @@ def compute_surface_grad(
             "iqja, jkq -> aikq", grad_phi_x_y_at_GPs_stacked[:,:,:,:,0], T
         )
         
-    print('norm of difference surface_grad to global grad:\n',\
-          np.linalg.norm(surface_grad_phi_x_y_at_GPs_stacked\
-          -(grad_phi_x_y_at_GPs_stacked[:,:,:,:,0].transpose(3,0,2,1))))
+    #print('norm of difference surface_grad to global grad:\n',\
+    #      np.linalg.norm(surface_grad_phi_x_y_at_GPs_stacked\
+    #      -(grad_phi_x_y_at_GPs_stacked[:,:,:,:,0].transpose(3,0,2,1))))
+    #print(surface_grad_phi_x_y_at_GPs_stacked)
     return surface_grad_phi_x_y_at_GPs_stacked
 
 
@@ -320,6 +321,9 @@ def interface_geometry(x: np.ndarray, element, quad_points, nInt: int, dim: int)
 
     T = I - N
 
+    #print('I:\n', I)
+    #print('N:\n', N)
+    #print('T:\n',T)
     return normal, N, T
 
 # Assignment routines for the stiffness matrices of the finte element
@@ -349,21 +353,41 @@ def assign_K_jumpu_jumpv(grad, Nbasis, H_inv_ij, i):
 def calculate_B_surface_grad(grad, grad_s):
 
     K_local_shape = grad.shape
+    #print(grad_s.shape)
 
-
-    B_matrix = np.zeros((K_local_shape[0]*K_local_shape[0], K_local_shape[0]*K_local_shape[3]))
+    B_matrix = np.zeros((K_local_shape[1],K_local_shape[0]*K_local_shape[0], K_local_shape[0]*K_local_shape[3]))
     # We double the matrix beause we have double number of nodes side + side -
-    for ij in range(B_matrix.shape[0]):
-        for node_A in range(K_local_shape[3]):
-            for k in range(K_local_shape[0]):
-                Ak = node_A*K_local_shape[0]+k
-                if Ak == int(node_A*K_local_shape[0]+ij%3):
-                    B_matrix[ij,Ak] = grad_s.transpose((0,2,1))[node_A,int(ij//3),int(ij%3)]
+    for qp in range(K_local_shape[1]):
+        for ij in range(B_matrix.shape[1]):
+            for node_A in range(K_local_shape[3]):
+                for k in range(K_local_shape[0]):
+                    Ak = node_A*K_local_shape[0]+k
+                    if Ak == int(node_A*K_local_shape[0]+ij%3):
+                        B_matrix[qp,ij,Ak] = grad_s[:,:,:,qp].transpose((0,2,1))[node_A,int(ij//3),int(ij%3)]
+    #print(B_matrix)
     return B_matrix
 
-def assign_K_grad_s_u_grad_s_v(grad, grad_s, Z_ijkl, i):
-    B_matrix = calculate_B_surface_grad(grad, grad_s)
 
+
+#def calculate_B_surface_grad(grad, grad_s):
+
+#    K_local_shape = grad.shape
+
+
+#    B_matrix = np.zeros((K_local_shape[0]*K_local_shape[0], K_local_shape[0]*K_local_shape[3]))
+#    # We double the matrix beause we have double number of nodes side + side -
+#    for ij in range(B_matrix.shape[0]):
+#        for node_A in range(K_local_shape[3]):
+#            for k in range(K_local_shape[0]):
+#                Ak = node_A*K_local_shape[0]+k
+#                if Ak == int(node_A*K_local_shape[0]+ij%3):
+#                    B_matrix[ij,Ak] = grad_s.transpose((0,2,1))[node_A,int(ij//3),int(ij%3)]
+#    return B_matrix
+
+def assign_K_grad_s_u_grad_s_v(grad, grad_s, Z_ijkl, B_matrix):
+    #B_matrix = calculate_B_surface_grad(grad, grad_s)
+    #print('B_matrix:')
+    #print(B_matrix)
     K_grad_s_u_grad_s_v = np.einsum('im,mn,nj->ij', B_matrix.T, Z_ijkl.reshape(9,9), B_matrix)
     K_grad_s_u_grad_s_v = np.hstack((K_grad_s_u_grad_s_v, K_grad_s_u_grad_s_v))
     K_grad_s_u_grad_s_v = np.vstack((K_grad_s_u_grad_s_v,K_grad_s_u_grad_s_v))
@@ -377,8 +401,8 @@ def assign_P_jumpv(grad, Nbasis, force, i):
 
     return P_jumpv
 
-def assign_P_grad_s_v(grad, grad_s, surface_stress, i):
-    B_matrix = calculate_B_surface_grad(grad, grad_s)
+def assign_P_grad_s_v(grad, grad_s, surface_stress, B_matrix):
+    #B_matrix = calculate_B_surface_grad(grad, grad_s)
     P_grad_s_v = np.einsum('im,mj->ij', B_matrix.T, surface_stress.reshape(9,1))
     P_grad_s_v = np.vstack((P_grad_s_v, P_grad_s_v))
 

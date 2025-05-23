@@ -62,6 +62,7 @@ from edelweissfe.elements.interfaceelement.elementmatrices import (
     assign_P_grad_s_v,
     computeJacobian,
     computeNOperator,
+    calculate_B_surface_grad,
 )
 from edelweissfe.points.node import Node
 from edelweissfe.utils.caseinsensitivedict import CaseInsensitiveDict
@@ -140,8 +141,10 @@ elLibrary = CaseInsensitiveDict(
         matSize=3,
         index=np.array([0, 1, 3]),
         plStrain=True,
+        reorder_nodes_list=[4,7,0,3,5,6,1,2],
+        #reorder_nodes_list=[1,0,2,3,5,4,6,7],
         #reorder_nodes_list=[0,1,3,2,4,5,7,6],
-        reorder_nodes_list=[2,3,1,0,6,7,5,4],
+        #reorder_nodes_list=[2,3,1,0,6,7,5,4],
         hasMaterial = False,
     ),
     IQuad8=dict(
@@ -446,6 +449,11 @@ class InterfaceElement(BaseElement):
             self.nSpatialDimensions
         )
 
+        self.B_matrix = calculate_B_surface_grad(
+           self.grad,
+           self.surface_grad
+        )
+
     def setMaterial(self, material: type):
         """Assign a material
         Parameters
@@ -553,7 +561,6 @@ class InterfaceElement(BaseElement):
         """
 
         # assume it's plain strain if it's not given by user
-        
         dU = dU.reshape((self._nNodes,-1)) 
         # copy all elements
         self._stateVarsTemp = [
@@ -570,16 +577,23 @@ class InterfaceElement(BaseElement):
         dU_GPs_bottom = np.einsum('aiq,ai->iq',self.basis_function[:,:,:,0],dU[self.number_of_element_nodes:]).transpose((1,0))
 
         self._dU_GPs =np.ascontiguousarray( np.hstack((dU_GPs_top, dU_GPs_bottom)))
-        dSurface_strain_GPs_top = np.einsum('aikq,ai->ikq',self.surface_grad[:,:,:,:],dU[:self.number_of_element_nodes]).reshape((-1,self._nInt)).transpose((1,0))
-        dSurface_strain_GPs_bottom = np.einsum('aikq,ai->ikq',self.surface_grad[:,:,:,:],dU[self.number_of_element_nodes:]).reshape((-1,self._nInt)).transpose((1,0)) 
-
+        #dSurface_strain_GPs_top = np.einsum('aikq,ai->ikq',self.surface_grad[:,:,:,:],dU[:self.number_of_element_nodes]).reshape((-1,self._nInt)).transpose((1,0))
+        #dSurface_strain_GPs_bottom = np.einsum('aikq,ai->ikq',self.surface_grad[:,:,:,:],dU[self.number_of_element_nodes:]).reshape((-1,self._nInt)).transpose((1,0))
+        #print('B_matrix shape:', self.B_matrix.shape)
+        dSurface_strain_GPs_top = np.einsum('qcm,m->qc',self.B_matrix,dU[:self.number_of_element_nodes].flatten())
+        dSurface_strain_GPs_bottom = np.einsum('qcm,m->qc',self.B_matrix,dU[self.number_of_element_nodes:].flatten()) 
+        
+        #if self._elNumber==32:
+        #    print('surface strain_top:\n', dSurface_strain_GPs_top[0,:])
+        #    print('surface_strain_bottom:\n', dSurface_strain_GPs_bottom[0,:])        
+        
         self._dSurface_strain_GPs = np.ascontiguousarray( np.hstack((dSurface_strain_GPs_top, dSurface_strain_GPs_bottom )))
         #print('surface_strain_GPs:\n', self._dSurface_strain_GPs) 
-        h = 1.e0
+        h = 1.e-6
 
         self._J_jumpv = np.zeros((self._nDof, self._nDof))
         self._J_grad_s_v = np.zeros((self._nDof, self._nDof))
-
+        
         for i in range(self._nInt):
             # get stress and strain
             self._force_at_Gauss = self._stateVarsTemp[i][0:self.nSpatialDimensions] # 3
@@ -590,7 +604,7 @@ class InterfaceElement(BaseElement):
 
             self.material.assignStateVars(self._stateVarsTemp[i][24:]) #Not necessary for now... (elasticity)
 
-
+            #print(self.n[i])
             if not self.planeStrain and self.nSpatialDimensions == 2:
                 raise Exception("Plain stress is not yet implemented in this element provider.")
                 # self.material.computePlaneStress(stress, self._dStressdStrain[i], self._dStrain[i], time, dTime)
@@ -604,6 +618,9 @@ class InterfaceElement(BaseElement):
                                             time[-1],
                                             dTime
                                             )
+            #if self._elNumber==32 and i == 0:
+                #print('surface strain:\n', self._dSurface_strain_GPs[i])
+                #print('surface_stress:\n',self._surface_stress_at_Gauss)
 
             Z_ijkl = self._dStressdStrain[i][:9,:9].reshape((3,3,3,3))[:self.nSpatialDimensions,:self.nSpatialDimensions,:self.nSpatialDimensions,:self.nSpatialDimensions] #Pick only the appropriate spatial dimensions
             H_inv_ij = self._dStressdStrain[i][9:12, 9:12].reshape((3,3))[:self.nSpatialDimensions,:self.nSpatialDimensions]
@@ -627,15 +644,15 @@ class InterfaceElement(BaseElement):
             # Additional energy due to surface stiffness terms with Z_ijkl
             # get stiffness matrix for element j in point i
             K_grad_s_u_grad_s_v = assign_K_grad_s_u_grad_s_v(
-                self.grad, grad_s, Z_ijkl, i
+                self.grad, grad_s, Z_ijkl, self.B_matrix[i]
             )
 
-            K += h/2.*K_grad_s_u_grad_s_v.flatten() * detJ * self._t * self._weight[i]
+            K -= h/2.*K_grad_s_u_grad_s_v.flatten() * detJ * self._t * self._weight[i]
 
             # Additional energy due to surface stiffness terms with Yn_H_inv_Fn_ijkl
             # get stiffness matrix for element j in point i
             K_grad_s_u_grad_s_v = assign_K_grad_s_u_grad_s_v(
-                self.grad, grad_s, Yn_H_inv_Fn_ijkl, i
+                self.grad, grad_s, Yn_H_inv_Fn_ijkl, self.B_matrix[i]
             )
             K += h/2*K_grad_s_u_grad_s_v.flatten() * detJ * self._t * self._weight[i]
             # Additional energy due to coupling between surface stiffness and jump terms with H_inv_nF_ijk
@@ -661,8 +678,8 @@ class InterfaceElement(BaseElement):
             P -= 2./h*(P_jumpv[:,0] * detJ * self._t * self._weight[i])
             
             # calculate P (surface elasticity contribution)
-            P_grad_s_v = assign_P_grad_s_v(self.grad, grad_s, self._surface_stress_at_Gauss, i)
-            P -= h/2.*(P_grad_s_v[:,0] * detJ * self._t * self._weight[i])
+            P_grad_s_v = assign_P_grad_s_v(self.grad, grad_s, self._surface_stress_at_Gauss, self.B_matrix[i])
+            P += h/2.*(P_grad_s_v[:,0] * detJ * self._t * self._weight[i])
 
             self._stateVarsTemp[i][0:self.nSpatialDimensions] = self._force_at_Gauss
             self._stateVarsTemp[i][3:int(3+self.nSpatialDimensions**2)] = self._surface_stress_at_Gauss.reshape(-1)
@@ -764,7 +781,7 @@ class InterfaceElement(BaseElement):
             dSurface_strain_GPs_top_right = np.einsum('aikq,ai->ikq',self.surface_grad[:,:,:,:],dU_right[:self.number_of_element_nodes]).reshape((-1,self._nInt)).transpose((1,0))
             dSurface_strain_GPs_bottom_right = np.einsum('aikq,ai->ikq',self.surface_grad[:,:,:,:],dU_right[self.number_of_element_nodes:]).reshape((-1,self._nInt)).transpose((1,0))
             dSurface_strain_GPs_right = np.ascontiguousarray( np.hstack((dSurface_strain_GPs_top_right, dSurface_strain_GPs_bottom_right))) 
-             
+
             self.material.computeStress(force_at_Gauss_right,
                                         surface_stress_at_Gauss_right,
                                         dStressdStrain[i],
