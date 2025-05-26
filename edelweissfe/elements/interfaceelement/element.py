@@ -50,6 +50,7 @@ from edelweissfe.elements.base.baseelement import BaseElement
 from edelweissfe.materials.marmotinterfacematerial.marmotinterfacematerialwrapper import MarmotInterfaceMaterialWrapper
 
 from edelweissfe.elements.interfaceelement.elementmatrices import (
+    calculate_N_jump,
     compute_grad,
     compute_surface_grad,
     compute_surface_div_grad,
@@ -62,6 +63,7 @@ from edelweissfe.elements.interfaceelement.elementmatrices import (
     assign_P_grad_s_v,
     computeJacobian,
     computeNOperator,
+    calculate_N_jump,
     calculate_B_surface_grad,
 )
 from edelweissfe.points.node import Node
@@ -448,6 +450,10 @@ class InterfaceElement(BaseElement):
             self._nInt, 
             self.nSpatialDimensions
         )
+        
+        self.N_matrix = calculate_N_jump(
+            self.basis_function[:,:,:,0]
+        )
 
         self.B_matrix = calculate_B_surface_grad(
            self.grad,
@@ -573,23 +579,15 @@ class InterfaceElement(BaseElement):
         self.number_of_top_dofs =int(self._nDof/2)
         self.number_of_top_strain_comp = int(self.nSpatialDimensions*self.nSpatialDimensions)
 
-        dU_GPs_top = np.einsum('aiq,ai->iq',self.basis_function[:,:,:,0],dU[:self.number_of_element_nodes]).transpose((1,0))
-        dU_GPs_bottom = np.einsum('aiq,ai->iq',self.basis_function[:,:,:,0],dU[self.number_of_element_nodes:]).transpose((1,0))
-
+        dU_GPs_top = np.einsum('qcm,m->qc',self.N_matrix,dU[:self.number_of_element_nodes].flatten())
+        dU_GPs_bottom = np.einsum('qcm,m->qc',self.N_matrix,dU[self.number_of_element_nodes:].flatten())
         self._dU_GPs =np.ascontiguousarray( np.hstack((dU_GPs_top, dU_GPs_bottom)))
-        #dSurface_strain_GPs_top = np.einsum('aikq,ai->ikq',self.surface_grad[:,:,:,:],dU[:self.number_of_element_nodes]).reshape((-1,self._nInt)).transpose((1,0))
-        #dSurface_strain_GPs_bottom = np.einsum('aikq,ai->ikq',self.surface_grad[:,:,:,:],dU[self.number_of_element_nodes:]).reshape((-1,self._nInt)).transpose((1,0))
-        #print('B_matrix shape:', self.B_matrix.shape)
+
         dSurface_strain_GPs_top = np.einsum('qcm,m->qc',self.B_matrix,dU[:self.number_of_element_nodes].flatten())
-        dSurface_strain_GPs_bottom = np.einsum('qcm,m->qc',self.B_matrix,dU[self.number_of_element_nodes:].flatten()) 
-        
-        #if self._elNumber==32:
-        #    print('surface strain_top:\n', dSurface_strain_GPs_top[0,:])
-        #    print('surface_strain_bottom:\n', dSurface_strain_GPs_bottom[0,:])        
-        
+        dSurface_strain_GPs_bottom = np.einsum('qcm,m->qc',self.B_matrix,dU[self.number_of_element_nodes:].flatten())      
         self._dSurface_strain_GPs = np.ascontiguousarray( np.hstack((dSurface_strain_GPs_top, dSurface_strain_GPs_bottom )))
-        #print('surface_strain_GPs:\n', self._dSurface_strain_GPs) 
-        h = 1.e-6
+         
+        h = 1.e0
 
         self._J_jumpv = np.zeros((self._nDof, self._nDof))
         self._J_grad_s_v = np.zeros((self._nDof, self._nDof))
@@ -618,67 +616,46 @@ class InterfaceElement(BaseElement):
                                             time[-1],
                                             dTime
                                             )
-            #if self._elNumber==32 and i == 0:
-                #print('surface strain:\n', self._dSurface_strain_GPs[i])
-                #print('surface_stress:\n',self._surface_stress_at_Gauss)
 
             Z_ijkl = self._dStressdStrain[i][:9,:9].reshape((3,3,3,3))[:self.nSpatialDimensions,:self.nSpatialDimensions,:self.nSpatialDimensions,:self.nSpatialDimensions] #Pick only the appropriate spatial dimensions
             H_inv_ij = self._dStressdStrain[i][9:12, 9:12].reshape((3,3))[:self.nSpatialDimensions,:self.nSpatialDimensions]
             H_inv_nF_ijk = self._dStressdStrain[i][:9,9:12].reshape((3,3,3))[:self.nSpatialDimensions,:self.nSpatialDimensions,:self.nSpatialDimensions]
             Yn_H_inv_Fn_ijkl = self._dStressdStrain[i][12:21,12:21].reshape((3,3,3,3))[:self.nSpatialDimensions,:self.nSpatialDimensions,:self.nSpatialDimensions,:self.nSpatialDimensions]
-
-            Nbasis = self.basis_function[
-                :, :, i
-            ]  # Interponation operator between the nodes of one side
-            grad_s = self.surface_grad[
-                :, :, :, i
-            ]  # surface gradient operator between the nodes of one side
             
             detJ = self.sqrt_detG[i]
         
-            K_jumpu_jumpv = assign_K_jumpu_jumpv(self.grad, Nbasis, H_inv_ij, i)
-
-
+            K_jumpu_jumpv = assign_K_jumpu_jumpv(self.N_matrix[i], H_inv_ij)
             K +=2./h*K_jumpu_jumpv.flatten() * detJ * self._t * self._weight[i]
 
             # Additional energy due to surface stiffness terms with Z_ijkl
             # get stiffness matrix for element j in point i
-            K_grad_s_u_grad_s_v = assign_K_grad_s_u_grad_s_v(
-                self.grad, grad_s, Z_ijkl, self.B_matrix[i]
-            )
-
+            K_grad_s_u_grad_s_v = assign_K_grad_s_u_grad_s_v(self.B_matrix[i], Z_ijkl)
             K -= h/2.*K_grad_s_u_grad_s_v.flatten() * detJ * self._t * self._weight[i]
 
             # Additional energy due to surface stiffness terms with Yn_H_inv_Fn_ijkl
             # get stiffness matrix for element j in point i
-            K_grad_s_u_grad_s_v = assign_K_grad_s_u_grad_s_v(
-                self.grad, grad_s, Yn_H_inv_Fn_ijkl, self.B_matrix[i]
-            )
+            K_grad_s_u_grad_s_v = assign_K_grad_s_u_grad_s_v(self.B_matrix[i], Yn_H_inv_Fn_ijkl)
             K += h/2*K_grad_s_u_grad_s_v.flatten() * detJ * self._t * self._weight[i]
             # Additional energy due to coupling between surface stiffness and jump terms with H_inv_nF_ijk
             # get stiffness matrix for element j in point i
-            K_jump_u_grad_s_v = assign_K_jump_u_grad_s_v(
-                self.grad, grad_s, Nbasis, H_inv_nF_ijk, i
-            )
+            K_jump_u_grad_s_v = assign_K_jump_u_grad_s_v(self.N_matrix[i], self.B_matrix[i], H_inv_nF_ijk)
             K -= K_jump_u_grad_s_v.flatten() * detJ * self._t * self._weight[i]
 
             # Additional energy due to coupling between jump and surface stiffness terms with H_inv_nF_ijk
             # get stiffness matrix for element j in point i
-            K_grad_s_u_jump_v = assign_K_grad_s_u_jump_v(
-                self.grad, grad_s, Nbasis, H_inv_nF_ijk, i
-            )
-             
+            K_grad_s_u_jump_v = assign_K_grad_s_u_jump_v(self.N_matrix[i], self.B_matrix[i], H_inv_nF_ijk)             
             K -= K_grad_s_u_jump_v.flatten() * detJ * self._t * self._weight[i]
 
+            # Calculate residual vector P
             # Because we do not separate between coupled forces from jumps and surface elasticity only two terms are present instead of five
             # If we want more control we need to assign the extra forces and stress parts in the state variables vector increasing memory requirements
             
             # calculate P (jump contribution)
-            P_jumpv = assign_P_jumpv(self.grad, Nbasis, self._force_at_Gauss, i)
+            P_jumpv = assign_P_jumpv(self.N_matrix[i], self._force_at_Gauss)
             P -= 2./h*(P_jumpv[:,0] * detJ * self._t * self._weight[i])
             
             # calculate P (surface elasticity contribution)
-            P_grad_s_v = assign_P_grad_s_v(self.grad, grad_s, self._surface_stress_at_Gauss, self.B_matrix[i])
+            P_grad_s_v = assign_P_grad_s_v(self.B_matrix[i], self._surface_stress_at_Gauss)
             P += h/2.*(P_grad_s_v[:,0] * detJ * self._t * self._weight[i])
 
             self._stateVarsTemp[i][0:self.nSpatialDimensions] = self._force_at_Gauss
@@ -686,9 +663,12 @@ class InterfaceElement(BaseElement):
             self._stateVarsTemp[i][12:int(12+self._dU_GPs[i].shape[0])] += self._dU_GPs[i]
             self._stateVarsTemp[i][18:int(18+self._dSurface_strain_GPs[i].shape[0])]  += self._dSurface_strain_GPs[i]
 
-            #J_jumpv_temp, J_grad_s_v_temp = self.calculate_forward_gradient_X_right( grad_s, Nbasis, time, dTime, dU, i, P_jumpv[:,0], P_grad_s_v[:,0])
+            #J_jumpv_temp, J_grad_s_v_temp = self.calculate_forward_gradient_X_right( self.N_matrix[i], self.B_matrix[i],\
+            #                                                                         time, dTime, dU, i, P_jumpv[:,0], P_grad_s_v[:,0])
 
-            #J_jumpv_temp, J_grad_s_v_temp = self.calculate_central_gradient_X_right( grad_s, Nbasis, time, dTime, dU, i,P_jumpv[:,0], P_grad_s_v[:,0])
+            #J_jumpv_temp, J_grad_s_v_temp = self.calculate_central_gradient_X_right( self.N_matrix[i], self.B_matrix[i],\
+            #                                                                         time, dTime, dU, i,P_jumpv[:,0], P_grad_s_v[:,0])
+            
             #self._J_jumpv += 0.*2/h*J_jumpv_temp*detJ*self._t*self._weight[i]
             #self._J_grad_s_v -= h/2.*J_grad_s_v_temp*detJ*self._t*self._weight[i]
             
@@ -704,7 +684,7 @@ class InterfaceElement(BaseElement):
         #print('H_inv_nF_ijk:\n',H_inv_nF_ijk)
         #print('Yn_H_inv_Fn_ijkl:\n',Yn_H_inv_Fn_ijkl)
         
-    def calculate_forward_gradient_X_right(self, grad_s, Nbasis, time, dTime, dU, i,\
+    def calculate_forward_gradient_X_right(self, N_matrix, B_matrix, time, dTime, dU, i,\
                                            P_jumpv_X, P_grad_s_v_X
                                            ):
 
@@ -725,13 +705,12 @@ class InterfaceElement(BaseElement):
             dU_right[p] += epsilon
             dU_right = dU_right.reshape((-1,3))
 
-            dU_GPs_top_right = np.einsum('ai,ai->i',self.basis_function[:,:,i,0],dU_right[:self.number_of_element_nodes]).flatten()
-            dU_GPs_bottom_right = np.einsum('ai,ai->i',self.basis_function[:,:,i,0],dU_right[self.number_of_element_nodes:]).flatten()
-
+            dU_GPs_top_right = np.einsum('cm,m->c',N_matrix,dU_right[:self.number_of_element_nodes].flatten())
+            dU_GPs_bottom_right = np.einsum('cm,m->c',N_matrix,dU_right[self.number_of_element_nodes:].flatten())
             dU_GPs_right =np.ascontiguousarray( np.hstack((dU_GPs_top_right, dU_GPs_bottom_right)))
 
-            dSurface_strain_GPs_top_right = np.einsum('aik,ak->ik',self.surface_grad[:,:,:,i],dU_right[:self.number_of_element_nodes]).flatten()
-            dSurface_strain_GPs_bottom_right = np.einsum('aik,ak->ik',self.surface_grad[:,:,:,i],dU_right[self.number_of_element_nodes:]).flatten()
+            dSurface_strain_GPs_top_right = np.einsum('cm,m->c',B_matrix,dU_right[:self.number_of_element_nodes].flatten())
+            dSurface_strain_GPs_bottom_right = np.einsum('cm,m->c',B_matrix,dU_right[self.number_of_element_nodes:].flatten())
             dSurface_strain_GPs_right = np.ascontiguousarray( np.hstack((dSurface_strain_GPs_top_right, dSurface_strain_GPs_bottom_right)))
 
             self.material.computeStress(force_at_Gauss_right,
@@ -745,16 +724,15 @@ class InterfaceElement(BaseElement):
                                         )
             
             
-            P_jumpv_X_right = assign_P_jumpv(self.grad, Nbasis, force_at_Gauss_right, i)[:,0]
-            P_grad_s_v_X_right = assign_P_grad_s_v(self.grad, grad_s, surface_stress_at_Gauss_right, i)[:,0]
+            P_jumpv_X_right = assign_P_jumpv(N_matrix, force_at_Gauss_right)[:,0]
+            P_grad_s_v_X_right = assign_P_grad_s_v(B_matrix, surface_stress_at_Gauss_right)[:,0]
             
             J_jumpv[:,p] = (P_jumpv_X_right-P_jumpv_X)/epsilon
             J_grad_s_v[:,p] = (P_grad_s_v_X_right-P_grad_s_v_X)/epsilon
         
         return J_jumpv, J_grad_s_v
 
-    def calculate_central_gradient_X_right(self, grad_s, Nbasis, time, dTime, dU, i,\
-                                           P_jumpv_X, P_grad_s_v_X):
+    def calculate_central_gradient_X_right(self, N_matrix, B_matrix, time, dTime, dU, i):
 
         #Initialize matrices for forward differentiation
         J_jumpv = np.zeros((self.nDof,self.nDof)) 
@@ -773,13 +751,13 @@ class InterfaceElement(BaseElement):
             dU_right[p] += epsilon
 
             dU_right = dU_right.reshape((-1,3))
-            dU_GPs_top_right = np.einsum('aiq,ai->iq',self.basis_function[:,:,:,0],dU_right[:self.number_of_element_nodes]).transpose((1,0))
-            dU_GPs_bottom_right = np.einsum('aiq,ai->iq',self.basis_function[:,:,:,0],dU_right[self.number_of_element_nodes:]).transpose((1,0))
+            dU_GPs_top_right = np.einsum('cm,m->c', N_matrix,dU_right[:self.number_of_element_nodes].flatten())
+            dU_GPs_bottom_right = np.einsum('cm,m->c', N_matrix,dU_right[self.number_of_element_nodes:].flatten())
 
             dU_GPs_right =np.ascontiguousarray( np.hstack((dU_GPs_top_right, dU_GPs_bottom_right)))
 
-            dSurface_strain_GPs_top_right = np.einsum('aikq,ai->ikq',self.surface_grad[:,:,:,:],dU_right[:self.number_of_element_nodes]).reshape((-1,self._nInt)).transpose((1,0))
-            dSurface_strain_GPs_bottom_right = np.einsum('aikq,ai->ikq',self.surface_grad[:,:,:,:],dU_right[self.number_of_element_nodes:]).reshape((-1,self._nInt)).transpose((1,0))
+            dSurface_strain_GPs_top_right = np.einsum('cm,m->c',B_matrix,dU_right[:self.number_of_element_nodes].flatten())
+            dSurface_strain_GPs_bottom_right = np.einsum('cm,m->c',B_matrix,dU_right[self.number_of_element_nodes:].flatten())
             dSurface_strain_GPs_right = np.ascontiguousarray( np.hstack((dSurface_strain_GPs_top_right, dSurface_strain_GPs_bottom_right))) 
 
             self.material.computeStress(force_at_Gauss_right,
@@ -793,8 +771,8 @@ class InterfaceElement(BaseElement):
                                         )
 
             
-            P_jumpv_X_right = assign_P_jumpv(self.grad, Nbasis, force_at_Gauss_right, i)
-            P_grad_s_v_X_right = assign_P_grad_s_v(self.grad, grad_s, surface_stress_at_Gauss_right, i)
+            P_jumpv_X_right = assign_P_jumpv(N_matrix, force_at_Gauss_right)
+            P_grad_s_v_X_right = assign_P_grad_s_v(B_matrix, surface_stress_at_Gauss_right)
             
             force_at_Gauss_left = copy.deepcopy(self._force_at_Gauss_X)
             surface_stress_at_Gauss_left = copy.deepcopy(self._surface_stress_at_Gauss_X)            
@@ -803,13 +781,13 @@ class InterfaceElement(BaseElement):
             dU_left[p] -= epsilon
 
             dU_left = dU_left.reshape((-1,3))
-            dU_GPs_top_left = np.einsum('aiq,ai->iq',self.basis_function[:,:,:,0],dU_left[:self.number_of_element_nodes]).transpose((1,0))
-            dU_GPs_bottom_left = np.einsum('aiq,ai->iq',self.basis_function[:,:,:,0],dU_left[self.number_of_element_nodes:]).transpose((1,0))
+            dU_GPs_top_left = np.einsum('cm,m->c',self.N_matrix,dU_left[:self.number_of_element_nodes].flatten())
+            dU_GPs_bottom_left = np.einsum('cm,m->c',self.N_matrix,dU_left[self.number_of_element_nodes:].flatten())
 
             dU_GPs_left =np.ascontiguousarray( np.hstack((dU_GPs_top_left, dU_GPs_bottom_left)))
 
-            dSurface_strain_GPs_top_left = np.einsum('aikq,ai->ikq',self.surface_grad[:,:,:,:],dU_left[:self.number_of_element_nodes]).reshape((-1,self._nInt)).transpose((1,0))
-            dSurface_strain_GPs_bottom_left = np.einsum('aikq,ai->ikq',self.surface_grad[:,:,:,:],dU_left[self.number_of_element_nodes:]).reshape((-1,self._nInt)).transpose((1,0))
+            dSurface_strain_GPs_top_left = np.einsum('cm,m->c',self.B_matrix,dU_left[:self.number_of_element_nodes].flatten())
+            dSurface_strain_GPs_bottom_left = np.einsum('cm,m->c',self.B_matrix,dU_left[self.number_of_element_nodes:].flatten())
             dSurface_strain_GPs_left = np.ascontiguousarray( np.hstack((dSurface_strain_GPs_top_left, dSurface_strain_GPs_bottom_left))) 
              
             self.material.computeStress(force_at_Gauss_left,
@@ -823,8 +801,8 @@ class InterfaceElement(BaseElement):
                                         )
 
             
-            P_jumpv_X_left = assign_P_jumpv(self.grad, Nbasis, force_at_Gauss_left, i)
-            P_grad_s_v_X_left = assign_P_grad_s_v(self.grad, grad_s, surface_stress_at_Gauss_left, i)
+            P_jumpv_X_left = assign_P_jumpv(N_matrix, force_at_Gauss_left)
+            P_grad_s_v_X_left = assign_P_grad_s_v(B_matrix, surface_stress_at_Gauss_left)
 
             J_jumpv[:,p] = (P_jumpv_X_right[:,0]-P_jumpv_X_left[:,0])/(2.*epsilon)
             J_grad_s_v[:,p] = (P_grad_s_v_X_right[:,0]-P_grad_s_v_X_left[:,0])/(2.*epsilon)
