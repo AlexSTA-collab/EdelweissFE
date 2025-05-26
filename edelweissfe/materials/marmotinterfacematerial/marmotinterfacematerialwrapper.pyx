@@ -97,7 +97,7 @@ cdef class MarmotInterfaceMaterialWrapper:
 def test_MarmotInterfaceMaterialWrapper():
 
     print("Testing MarmotInterfaceMaterialWrapper...") 
-    marmotMaterialInterfaceWrapper = MarmotInterfaceMaterialWrapper(np.array([100, .3, 200, .3, 400, .2]), 1)
+    marmotMaterialInterfaceWrapper = MarmotInterfaceMaterialWrapper(np.array([100, .3, 200, .3, 400, .2, 1e0]), 1)
 
     force = np.array([100., 200., 300.])
     surface_stress = np.ones((3,3))

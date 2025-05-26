@@ -586,8 +586,6 @@ class InterfaceElement(BaseElement):
         dSurface_strain_GPs_top = np.einsum('qcm,m->qc',self.B_matrix,dU[:self.number_of_element_nodes].flatten())
         dSurface_strain_GPs_bottom = np.einsum('qcm,m->qc',self.B_matrix,dU[self.number_of_element_nodes:].flatten())      
         self._dSurface_strain_GPs = np.ascontiguousarray( np.hstack((dSurface_strain_GPs_top, dSurface_strain_GPs_bottom )))
-         
-        h = 1.e0
 
         self._J_jumpv = np.zeros((self._nDof, self._nDof))
         self._J_grad_s_v = np.zeros((self._nDof, self._nDof))
@@ -625,17 +623,17 @@ class InterfaceElement(BaseElement):
             detJ = self.sqrt_detG[i]
         
             K_jumpu_jumpv = assign_K_jumpu_jumpv(self.N_matrix[i], H_inv_ij)
-            K +=2./h*K_jumpu_jumpv.flatten() * detJ * self._t * self._weight[i]
+            K +=K_jumpu_jumpv.flatten() * detJ * self._t * self._weight[i] #2/h
 
             # Additional energy due to surface stiffness terms with Z_ijkl
             # get stiffness matrix for element j in point i
             K_grad_s_u_grad_s_v = assign_K_grad_s_u_grad_s_v(self.B_matrix[i], Z_ijkl)
-            K -= h/2.*K_grad_s_u_grad_s_v.flatten() * detJ * self._t * self._weight[i]
+            K -= K_grad_s_u_grad_s_v.flatten() * detJ * self._t * self._weight[i] #h/2.
 
             # Additional energy due to surface stiffness terms with Yn_H_inv_Fn_ijkl
             # get stiffness matrix for element j in point i
             K_grad_s_u_grad_s_v = assign_K_grad_s_u_grad_s_v(self.B_matrix[i], Yn_H_inv_Fn_ijkl)
-            K += h/2*K_grad_s_u_grad_s_v.flatten() * detJ * self._t * self._weight[i]
+            K += K_grad_s_u_grad_s_v.flatten() * detJ * self._t * self._weight[i] #h/2
             # Additional energy due to coupling between surface stiffness and jump terms with H_inv_nF_ijk
             # get stiffness matrix for element j in point i
             K_jump_u_grad_s_v = assign_K_jump_u_grad_s_v(self.N_matrix[i], self.B_matrix[i], H_inv_nF_ijk)
@@ -652,11 +650,11 @@ class InterfaceElement(BaseElement):
             
             # calculate P (jump contribution)
             P_jumpv = assign_P_jumpv(self.N_matrix[i], self._force_at_Gauss)
-            P -= 2./h*(P_jumpv[:,0] * detJ * self._t * self._weight[i])
+            P -= (P_jumpv[:,0] * detJ * self._t * self._weight[i]) #2/h
             
             # calculate P (surface elasticity contribution)
             P_grad_s_v = assign_P_grad_s_v(self.B_matrix[i], self._surface_stress_at_Gauss)
-            P += h/2.*(P_grad_s_v[:,0] * detJ * self._t * self._weight[i])
+            P += (P_grad_s_v[:,0] * detJ * self._t * self._weight[i]) #h/2.
 
             self._stateVarsTemp[i][0:self.nSpatialDimensions] = self._force_at_Gauss
             self._stateVarsTemp[i][3:int(3+self.nSpatialDimensions**2)] = self._surface_stress_at_Gauss.reshape(-1)
