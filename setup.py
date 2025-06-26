@@ -134,6 +134,25 @@ extensions += [
     )
 ]
 
+print("Gather the extension for the MarmotViscoElasticInterfaceMaterial, linked to the Marmot library")
+extensions += [
+    Extension(
+        "edelweissfe.materials.marmotViscoElasticInterfacematerial.marmotViscoElasticInterfacematerialwrapper",  # ✅ Full module name
+        sources=[
+            "edelweissfe/materials/marmotViscoElasticInterfacematerial/marmotViscoElasticInterfacematerialwrapper.pyx",
+        ],
+        include_dirs=[
+            join(marmot_dir, "include"),  # generic Marmot headers
+            join(marmot_dir, "modules", "materials", "LinearViscoElasticInterface"),  # ✅ fix for MarmotKelvinChainInterface.h
+            numpy.get_include(),
+        ],
+        libraries=["Marmot"],
+        library_dirs=[join(marmot_dir, "lib")],
+        runtime_library_dirs=[join(marmot_dir, "lib")],
+        language="c++",
+    )
+]
+
 print("Gather the extension for the fast element result collector")
 extensions += [
     Extension(

@@ -70,6 +70,11 @@ def getMaterialClass(materialName: str, provider: str = None) -> type:
 
             material = MarmotInterfaceMaterialWrapper            
 
+        elif strCaseCmp(materialName, "marmotViscoElasticInterfacematerial"):
+            from edelweissfe.materials.marmotViscoElasticInterfacematerial.marmotViscoElasticInterfacematerialwrapper import MarmotViscoElasticInterfaceMaterialWrapper
+
+            material = MarmotViscoElasticInterfaceMaterialWrapper            
+
         else:
             raise Exception("This material type doesn't exist (yet). Chosen material was: " + materialName)
 
