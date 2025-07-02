@@ -14,7 +14,7 @@ from libcpp.vector cimport vector
 
 cdef class MarmotViscoElasticInterfaceMaterialWrapper:
 
-    cdef LinearViscoElasticInterface* _theMarmotViscoElasticInterfaceMaterialInstance
+    cdef LinearViscoElasticInterface* _theMarmotInterfaceMaterialInstance
     cdef double[::1] _stateVars
     cdef double[::1] _materialProperties
     cdef int _materialID
@@ -39,8 +39,7 @@ cdef class MarmotViscoElasticInterfaceMaterialWrapper:
         self._materialProperties = materialProperties
         self._materialID = materialID
         cdef int nMaterialProperties = len(materialProperties)
-
-        self._theMarmotViscoElasticInterfaceMaterialInstance = new LinearViscoElasticInterface(&self._materialProperties[0], nMaterialProperties, self._materialID)
+        self._theMarmotInterfaceMaterialInstance = new LinearViscoElasticInterface(&self._materialProperties[0], nMaterialProperties, self._materialID)
 
     def computeStress(self,
                       double[::1]  force,
@@ -55,7 +54,7 @@ cdef class MarmotViscoElasticInterfaceMaterialWrapper:
         cdef double pNewDT
         pNewDT = 1e36
 
-        self._theMarmotViscoElasticInterfaceMaterialInstance.computeStress(
+        self._theMarmotInterfaceMaterialInstance.computeStress(
             &force[0],
             &surface_stress[0,0],
             &dStress_dStrain[0,0],
@@ -65,26 +64,25 @@ cdef class MarmotViscoElasticInterfaceMaterialWrapper:
             &timeOld,
             dT,
             pNewDT) 
-
         if pNewDT < 1.0:
             raise CutbackRequest("Material requests for a cutback!", pNewDT)
 
     def getNumberOfRequiredStateVars(self,):
 
-        cdef int numberOfRequiredStateVarsMaterial = self._theMarmotViscoElasticInterfaceMaterialInstance.getNumberOfRequiredStateVars()
+        cdef int numberOfRequiredStateVarsMaterial = self._theMarmotInterfaceMaterialInstance.getNumberOfRequiredStateVars()
         return numberOfRequiredStateVarsMaterial
 
     def assignStateVars(self, double[::1] stateVars):
 
         self._stateVars = stateVars
 
-        self._theMarmotViscoElasticInterfaceMaterialInstance.assignStateVars(&self._stateVars[0], len(self._stateVars))
+        self._theMarmotInterfaceMaterialInstance.assignStateVars(&self._stateVars[0], len(self._stateVars))
 
     def getResultArray(self, result, getPersistentView=True):
 
         cdef string result_ =  result.encode('UTF-8')
 
-        cdef StateView res = self._theMarmotViscoElasticInterfaceMaterialInstance.getStateView(result_)
+        cdef StateView res = self._theMarmotInterfaceMaterialInstance.getStateView(result_)
 
         cdef double[::1] theView = <double[:res.stateSize]> ( res.stateLocation )
 
@@ -97,7 +95,7 @@ cdef class MarmotViscoElasticInterfaceMaterialWrapper:
 def test_MarmotViscoElasticInterfaceMaterialWrapper():
 
     print("Testing MarmotInterfaceMaterialWrapper...") 
-    marmotMaterialViscoElasticInterfaceWrapper = MarmotViscoElasticInterfaceMaterialWrapper(np.array([100, .3, 200, .3, 400, .2, 1e0]), 1)
+    marmotMaterialViscoElasticInterfaceWrapper = MarmotViscoElasticInterfaceMaterialWrapper(np.array([1.0,  0.3, 1.0,  0.3, 1e8,  0.3,  1e-5, 1, 2, 1, 0.01, 1, 2, 1, 0.01, 86400]), 2)
 
     force = np.array([100., 200., 300.])
     surface_stress = np.ones((3,3))
