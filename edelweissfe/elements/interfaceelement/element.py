@@ -143,10 +143,7 @@ elLibrary = CaseInsensitiveDict(
         matSize=3,
         index=np.array([0, 1, 3]),
         plStrain=True,
-        reorder_nodes_list=[4,7,0,3,5,6,1,2],
-        #reorder_nodes_list=[1,0,2,3,5,4,6,7],
-        #reorder_nodes_list=[0,1,3,2,4,5,7,6],
-        #reorder_nodes_list=[2,3,1,0,6,7,5,4],
+        reorder_nodes_list = [0,1,2,3,4,5,6,7],
         hasMaterial = False,
     ),
     IQuad8=dict(
@@ -362,6 +359,8 @@ class InterfaceElement(BaseElement):
         self._J_jumpv = np.zeros((self.nDof,self.nDof)) 
         self._J_grad_s_v = np.zeros((self.nDof,self.nDof))
         self.count = 0
+        self.inverse_order = np.empty_like(self.reorder_nodes_list)
+        self.inverse_order[self.reorder_nodes_list] = np.arange(len(self.reorder_nodes_list))
  
     def setNodes(self, nodes: list[Node]):
         """Assign the nodes to the element.
@@ -489,7 +488,6 @@ class InterfaceElement(BaseElement):
             for i in range(self._nInt)
         ]
         self._stateVarsTemp = np.zeros([self._nInt, stateVarsSize])
-        print('material Initialization was successfull')
 
     def setInitialCondition(self, stateType: str, values: np.ndarray):
         """Assign initial conditions.
@@ -564,10 +562,10 @@ class InterfaceElement(BaseElement):
             Array of step time and total time.
         dTime
             The time increment.
-        """
-
+        """ 
         # assume it's plain strain if it's not given by user
-        dU = dU.reshape((self._nNodes,-1)) 
+        dU = dU.reshape((self._nNodes,-1))
+
         # copy all elements
         self._stateVarsTemp = [
             self._stateVarsRef[i].copy() for i in range(self._nInt)
@@ -581,10 +579,11 @@ class InterfaceElement(BaseElement):
 
         dU_GPs_top = np.einsum('qcm,m->qc',self.N_matrix,dU[:self.number_of_element_nodes].flatten())
         dU_GPs_bottom = np.einsum('qcm,m->qc',self.N_matrix,dU[self.number_of_element_nodes:].flatten())
-        self._dU_GPs =np.ascontiguousarray( np.hstack((dU_GPs_top, dU_GPs_bottom)))
+        self._dU_GPs = np.ascontiguousarray( np.hstack((dU_GPs_top, dU_GPs_bottom)))
 
         dSurface_strain_GPs_top = np.einsum('qcm,m->qc',self.B_matrix,dU[:self.number_of_element_nodes].flatten())
-        dSurface_strain_GPs_bottom = np.einsum('qcm,m->qc',self.B_matrix,dU[self.number_of_element_nodes:].flatten())      
+        dSurface_strain_GPs_bottom = np.einsum('qcm,m->qc',self.B_matrix,dU[self.number_of_element_nodes:].flatten())
+
         self._dSurface_strain_GPs = np.ascontiguousarray( np.hstack((dSurface_strain_GPs_top, dSurface_strain_GPs_bottom )))
 
         self._J_jumpv = np.zeros((self._nDof, self._nDof))
@@ -598,7 +597,7 @@ class InterfaceElement(BaseElement):
             self._surface_stress_at_Gauss = self._stateVarsTemp[i][3:int(3+self.nSpatialDimensions**2)].reshape((self.nSpatialDimensions,self.nSpatialDimensions))
             self._surface_stress_at_Gauss_X = copy.deepcopy(self._stateVarsTemp[i][3:int(3+self.nSpatialDimensions**2)].reshape((self.nSpatialDimensions,self.nSpatialDimensions)))
 
-            self.material.assignStateVars(self._stateVarsTemp[i][24:]) #Not necessary for now... (elasticity)
+            self.material.assignStateVars(self._stateVarsTemp[i][24:])
 
             #print(self.n[i])
             if not self.planeStrain and self.nSpatialDimensions == 2:
@@ -641,7 +640,7 @@ class InterfaceElement(BaseElement):
 
             # Additional energy due to coupling between jump and surface stiffness terms with H_inv_nF_ijk
             # get stiffness matrix for element j in point i
-            K_grad_s_u_jump_v = assign_K_grad_s_u_jump_v(self.N_matrix[i], self.B_matrix[i], H_inv_nF_ijk)             
+            K_grad_s_u_jump_v = assign_K_grad_s_u_jump_v(self.N_matrix[i], self.B_matrix[i], H_inv_nF_ijk)        
             K -= K_grad_s_u_jump_v.flatten() * detJ * self._t * self._weight[i]
 
             # Calculate residual vector P
@@ -649,38 +648,31 @@ class InterfaceElement(BaseElement):
             # If we want more control we need to assign the extra forces and stress parts in the state variables vector increasing memory requirements
             
             # calculate P (jump contribution)
-            P_jumpv = assign_P_jumpv(self.N_matrix[i], self._force_at_Gauss)
-            P -= (P_jumpv[:,0] * detJ * self._t * self._weight[i]) #2/h
+            P_jumpv = assign_P_jumpv(self.N_matrix[i], self._force_at_Gauss)#.reshape((self._nNodes,-1))[order]
+            P -= (P_jumpv.flatten() * detJ * self._t * self._weight[i]) #2/h
             
             # calculate P (surface elasticity contribution)
-            P_grad_s_v = assign_P_grad_s_v(self.B_matrix[i], self._surface_stress_at_Gauss)
-            P += (P_grad_s_v[:,0] * detJ * self._t * self._weight[i]) #h/2.
+            P_grad_s_v = assign_P_grad_s_v(self.B_matrix[i], self._surface_stress_at_Gauss)#.reshape((self._nNodes,-1))[order]
+            P += (P_grad_s_v.flatten() * detJ * self._t * self._weight[i]) #h/2.
 
             self._stateVarsTemp[i][0:self.nSpatialDimensions] = self._force_at_Gauss
             self._stateVarsTemp[i][3:int(3+self.nSpatialDimensions**2)] = self._surface_stress_at_Gauss.reshape(-1)
             self._stateVarsTemp[i][12:int(12+self._dU_GPs[i].shape[0])] += self._dU_GPs[i]
             self._stateVarsTemp[i][18:int(18+self._dSurface_strain_GPs[i].shape[0])]  += self._dSurface_strain_GPs[i]
-
+            
             #J_jumpv_temp, J_grad_s_v_temp = self.calculate_forward_gradient_X_right( self.N_matrix[i], self.B_matrix[i],\
             #                                                                         time, dTime, dU, i, P_jumpv[:,0], P_grad_s_v[:,0])
 
             #J_jumpv_temp, J_grad_s_v_temp = self.calculate_central_gradient_X_right( self.N_matrix[i], self.B_matrix[i],\
             #                                                                         time, dTime, dU, i,P_jumpv[:,0], P_grad_s_v[:,0])
             
-            #self._J_jumpv += 0.*2/h*J_jumpv_temp*detJ*self._t*self._weight[i]
+            #self._J_jumpv += 2/h*J_jumpv_temp*detJ*self._t*self._weight[i]
             #self._J_grad_s_v -= h/2.*J_grad_s_v_temp*detJ*self._t*self._weight[i]
             
         #J_jumpv_matrix = self._J_jumpv.reshape((self.nDof,self.nDof))
         #J_grad_s_v_matrix = self._J_grad_s_v.reshape((self.nDof,self.nDof))
         #K_matrix = K.reshape((self.nDof,self.nDof)).copy()
-        #print('norm |K-J|:\n', np.linalg.norm(K_matrix-0.*J_jumpv_matrix-J_grad_s_v_matrix,1))
         ## K = (self._J_jumpv+self._J_grad_s_v) #Check with "correct" gradient 
-
-        #print('normal:\n',self.n)
-        #print('Z_ijkl:\n',Z_ijkl)
-        #print('H_inv_ij:\n',H_inv_ij)
-        #print('H_inv_nF_ijk:\n',H_inv_nF_ijk)
-        #print('Yn_H_inv_Fn_ijkl:\n',Yn_H_inv_Fn_ijkl)
         
     def calculate_forward_gradient_X_right(self, N_matrix, B_matrix, time, dTime, dU, i,\
                                            P_jumpv_X, P_grad_s_v_X

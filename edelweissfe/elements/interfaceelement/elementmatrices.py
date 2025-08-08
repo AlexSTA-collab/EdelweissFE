@@ -65,9 +65,10 @@ def computeJacobian(x: np.ndarray, element, quad_points, dim: int):
     """
     # Define interface element and quadrature rule
     # keep only the unique nodal coordinates
-
+    #print('Nodal coordinates per element:')
+    #print(x)
     x = x[:,:int(x.shape[1]/2)].transpose(1,0)
-    #print('Nodal points:\n',x)
+    #print('Nodal points after make unique:\n',x)
 
     if (dim-1) == 1:
 
@@ -97,7 +98,7 @@ def computeJacobian(x: np.ndarray, element, quad_points, dim: int):
         # Compute gradient matrices
         # (shape function derivatives at quadrature points)
         gradients = element.tabulate(1, quad_points)[1:] # we only keep one component because the element has the same dependence in xi,eta
-
+        
         for qp in range(len(quad_points)):  # Loop over quadrature points
             dphi_dxi = gradients[0, qp, :, :]  # dφ/dξ for all nodes
             dphi_deta = gradients[1, qp, :, :]  # dφ/dη for all nodes
@@ -186,6 +187,7 @@ def compute_surface_grad(
     _, _, T = interface_geometry(x, element, quad_points, nInt, dim)
     # T is of Shape: (component, dim, GP )
     grad_phi_x_y_at_GPs_stacked, _ = compute_grad(x, element, quad_points, nInt, dim)
+    #print('Grad for each component:\n',grad_phi_x_y_at_GPs_stacked)
     # Shape: (node, component, dim, GP)
     if dim == 2:
         surface_grad_phi_x_y_at_GPs_stacked = np.einsum(
@@ -199,7 +201,6 @@ def compute_surface_grad(
     #print('norm of difference surface_grad to global grad:\n',\
     #      np.linalg.norm(surface_grad_phi_x_y_at_GPs_stacked\
     #      -(grad_phi_x_y_at_GPs_stacked[:,:,:,:,0].transpose(3,0,2,1))))
-    #print(surface_grad_phi_x_y_at_GPs_stacked)
     return surface_grad_phi_x_y_at_GPs_stacked
 
 
@@ -268,7 +269,7 @@ def computeNOperator(x: np.ndarray, element, quad_points, dim: int):
         Dimension the element has.
     """
     # Define interface element and quadrature rule
-
+    #print(quad_points)
     N = element.tabulate(0, quad_points)[0]
     #print('N', N.shape) 
     # Get the stacked vector of interpolation functions with
@@ -328,21 +329,17 @@ def interface_geometry(x: np.ndarray, element, quad_points, nInt: int, dim: int)
 
 # Assignment routines for the stiffness matrices of the finte element
 def calculate_N_jump(N):
-
+    #print('Shape functions:', N.shape, '\n',N)
     N_matrix = np.zeros((N.shape[-1],N.shape[1],N.shape[0]*N.shape[1]))
     #print(N_matrix.shape)
     for qp in range(N_matrix.shape[0]): 
         for ij in range(N_matrix.shape[1]):
-            for node_A in range(N.shape[1]):
-                for k in range(N.shape[2]):
-                    Ak = node_A*N.shape[2]+k
-                    if Ak == int(node_A*N.shape[1]+ij):
-                    #print('Node_A, ij, Ak:',node_A, ij, Ak)
-                        N_matrix[qp,ij,Ak] = N[node_A, ij,qp]
+            for node_A in range(N.shape[0]): 
+                Ak =node_A*N.shape[1]+ij%3 
+                N_matrix[qp,ij,Ak] = N[node_A, ij,qp]
     return N_matrix
 
 def assign_K_jumpu_jumpv(N_matrix, H_inv_ij):
-    #N_matrix = calculate_N_jump(Nbasis)
     K_u1_v1 = np.einsum('im,mn,nj->ij', N_matrix.T, H_inv_ij, N_matrix)
     K_jumpu_jumpv_up = np.hstack((K_u1_v1, -K_u1_v1))
     K_jumpu_jumpv_down = np.hstack((-K_u1_v1,K_u1_v1))
@@ -352,16 +349,13 @@ def assign_K_jumpu_jumpv(N_matrix, H_inv_ij):
 def calculate_B_surface_grad(grad, grad_s):
 
     K_local_shape = grad.shape
-
-    B_matrix = np.zeros((K_local_shape[1],K_local_shape[0]*K_local_shape[0], K_local_shape[0]*K_local_shape[3]))
+    B_matrix = np.zeros((K_local_shape[1],K_local_shape[0]*K_local_shape[2], K_local_shape[2]*K_local_shape[3]))
     # We double the matrix beause we have double number of nodes side + side -
     for qp in range(K_local_shape[1]):
         for ij in range(B_matrix.shape[1]):
             for node_A in range(K_local_shape[3]):
-                for k in range(K_local_shape[0]):
-                    Ak = node_A*K_local_shape[0]+k
-                    if Ak == int(node_A*K_local_shape[0]+ij%3):
-                        B_matrix[qp,ij,Ak] = grad_s[:,:,:,qp].transpose((0,2,1))[node_A,int(ij//3),int(ij%3)]
+                Ak = node_A*K_local_shape[0]+ij//3
+                B_matrix[qp,ij,Ak] = grad_s[:,:,:,qp][node_A,int(ij//3),int(ij%3)]                        
     return B_matrix
 
 def assign_K_grad_s_u_grad_s_v(B_matrix, Z_ijkl):
