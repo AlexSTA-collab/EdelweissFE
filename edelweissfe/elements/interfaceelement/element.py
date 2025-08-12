@@ -597,7 +597,7 @@ class InterfaceElement(BaseElement):
             self._surface_stress_at_Gauss = self._stateVarsTemp[i][3:int(3+self.nSpatialDimensions**2)].reshape((self.nSpatialDimensions,self.nSpatialDimensions))
             self._surface_stress_at_Gauss_X = copy.deepcopy(self._stateVarsTemp[i][3:int(3+self.nSpatialDimensions**2)].reshape((self.nSpatialDimensions,self.nSpatialDimensions)))
 
-            self.material.assignStateVars(self._stateVarsTemp[i][24:])
+            self.material.assignStateVars(self._stateVarsTemp[i][36:])
 
             #print(self.n[i])
             if not self.planeStrain and self.nSpatialDimensions == 2:
@@ -917,83 +917,3 @@ class InterfaceElement(BaseElement):
             self.nSpatialDimensions,
         )
         return self._nodesCoordinates @ N
-        
-def main():
-    #interface_element = InterfaceElement('ILine3',0)
-    interface_element = InterfaceElement('IQuad4',0)
-    
-    #nodes = np.array([[0.0, 0.0],
-    #                [1.0, 1.0]])
-
-    #nodes = np.array([[0.0, 0.0],
-    #                  [2.0, 0.0],
-    #                  [1.0,0.0]])
-   
-
-    #Plane parallel to z axis
-
-    nodes = np.array([[0, 1, 1, 0, 0, 1, 1, 0],
-                      [0, 0, 1, 1, 0, 0, 1, 1],
-                      [0, 0, 0, 0, 0, 0, 0, 0]])
-    #nodes = np.array([[0.0, 0.0, 0.0],
-    #                 [1.0, 0.0, 0.0],
-    #                 [0.0, 1.0, 0.0],
-    #                 [1.0, 1.0, 0.0]])
-    
-    #plane oriented along a normal (-0.7,0,0.7)
-    #nodes = np.array([[0.0, 0.0, 0.0],
-    #                 [2.0, 0.0, 2.0],
-    #                 [0.0, 2.0, 0.0],
-    #                 [2.0, 2.0, 2.0]])
-    
-
-    #plane normal to ()
-    #nodes = np.array([
-    #                 [0.0, 0.0, 0.0],
-    #                 [0.0, 1.0, 0.0],
-    #                 [1.0, 1.0, 0.0],
-    #                 [1.0, 0.0, 0.0],
-    #                 [0.5, 0.0, 0.0],
-    #                 [0.0, 0.5, 0.0],
-    #                 [0.5, 1.0, 0.0],
-    #                 [1.0, 0.5, 0.0],
-    #                 [0.5, 0.5, 0.0]
-    #                 ])
-
-
-    interface_element._nodesCoordinates = nodes
-    interface_element.initializeElement()
-    #interface_element._nodesCoordinates = interface_element.setNodes(nodes)[:int(nodes.shape[1]/2)]#nodes.transpose(1,0)[:int(nodes.shape[1]/2)]
-    
-    E_M= 200.0; nu_M = 0.3; E_I = 200.0; nu_I = 0.3; E_0 = 200.0*0.1; nu_0 = 0.3\
-
-    materialProperties = np.array([E_M, nu_M, E_I, nu_I, E_0, nu_0])
-    material = interface_element.setMaterial(MarmotInterfaceMaterialWrapper(materialProperties,0))
-    #material = interface_element.setMaterial('1', materialProperties)
- 
-    force_GPs = np.repeat(np.array([100., 200., 300.]),interface_element._nInt)
-    surface_stress_GPs = np.repeat(np.ones((3,3)), interface_element._nInt); dStress_dStrain_GPs = np.repeat(np.ones((21,21)), interface_element._nInt) * 2\
-    
-    P_nodes = np.zeros((interface_element.nDof,1))#.reshape((interface_element._nNodes,-1))
-    U_nodes = np.zeros((interface_element.nDof,1))#.reshape((interface_element._nNodes,-1))
-    dU_nodes = np.ones(interface_element.nDof) * 3 # the element contains 6 nodes 3 top 3 bottom with dofs per node eq to the spatialdimension i.e 12 in total
-    
-    print('dU_nodes shape:', dU_nodes.shape[0])
-    dU_nodes[int(dU_nodes.shape[0]//2):] = -1*dU_nodes[int(dU_nodes.shape[0]//2):]
-    
-    #print('P_nodes',P_nodes.shape) 
-    #print('U_nodes', U_nodes.shape)
-    #print('dU_nodes', dU_nodes.shape)
-
-    K = np.random.rand(interface_element._nDof,interface_element._nDof)
-    K = np.einsum('jk,ik->ij',K ,K.transpose((1,0))).flatten() # create a positive definite matrix to avoid singularities
-    
-    #print('Alex  K:', K.shape)
-    time= np.array([0.0, 0.0])
-    dTime = 0.1
-
-    interface_element.computeYourself(K, P_nodes, U_nodes, dU_nodes, time, dTime)
-
-
-if __name__=="__main__":
-    main()
