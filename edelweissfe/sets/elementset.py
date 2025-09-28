@@ -28,11 +28,8 @@
 #  ---------------------------------------------------------------------
 
 from edelweissfe.elements.displacementelement.element import DisplacementElement
-<<<<<<< HEAD
 from edelweissfe.elements.interfaceelement.element import InterfaceElement
-=======
 from edelweissfe.elements.displacementtlelement.element import DisplacementTLElement
->>>>>>> origin/master
 from edelweissfe.elements.marmotelement.element import MarmotElementWrapper
 from edelweissfe.elements.marmotsingleqpelement.element import (
     MarmotMaterialWrappingElement,
