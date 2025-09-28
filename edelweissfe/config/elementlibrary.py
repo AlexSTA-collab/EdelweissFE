@@ -40,14 +40,23 @@ In future, elements by other providers or elements directly implemented in Edelw
         1000,        1,     2,     3,     4,     ...
 """
 
+from edelweissfe.elements.displacementelement.element import (  # noqa: F401
+    DisplacementElement,
+)
+from edelweissfe.elements.displacementtlelement.element import (  # noqa: F401
+    DisplacementTLElement,
+)
+from edelweissfe.elements.library import elLibrary
 from edelweissfe.utils.misc import strCaseCmp
 
 
-def getElementClass(provider: str = None) -> type:
+def getElementClass(elType: str, provider: str = None) -> type:
     """Get the class type of the requested element provider.
 
     Parameters
     ----------
+    elType
+        A string identifying the requested element formulation.
     provider
         The name of the element provider ot load.
 
@@ -60,8 +69,7 @@ def getElementClass(provider: str = None) -> type:
     if provider is None:
         provider = "marmot"
 
-    if strCaseCmp(provider, "displacementelement"):
-        from edelweissfe.elements.displacementelement.element import DisplacementElement
+    if strCaseCmp(provider, "edelweiss"):
 
         return DisplacementElement
     
@@ -75,9 +83,12 @@ def getElementClass(provider: str = None) -> type:
 
         return MarmotElementWrapper
 
-    if provider.lower() == "marmotsingleqpelement":
+    elif provider.lower() == "marmotsingleqpelement":
         from edelweissfe.elements.marmotsingleqpelement.element import (
             MarmotMaterialWrappingElement,
         )
 
         return MarmotMaterialWrappingElement
+
+    else:
+        raise Exception("This element provider doesn't exist!")
