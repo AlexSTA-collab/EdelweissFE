@@ -378,7 +378,7 @@ class InterfaceElement(BaseElement):
         self._nodesCoordinates = (
             _nodesCoordinates.transpose()
         )[:,self.reorder_nodes_list]
-        print('self._nodesCoordinates ',self._nodesCoordinates.shape )
+        #print('self._nodesCoordinates ',self._nodesCoordinates.shape )
         #[self.reorder_nodes_list,:]  # nodes given column-wise: x-coordinate - y-coordinate
 
     def setProperties(self, elementProperties: np.ndarray):

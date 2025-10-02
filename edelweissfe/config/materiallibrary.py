@@ -70,11 +70,9 @@ def getMaterialClass(materialName: str, provider: str = None) -> type:
             material = MarmotInterfaceMaterialWrapper            
 
         elif strCaseCmp(materialName, "marmotViscoElasticInterfacematerial"):
-            print('entering marmotViscoElasticInterfaceMaterial')
             from edelweissfe.materials.marmotViscoElasticInterfacematerial.marmotViscoElasticInterfacematerialwrapper import MarmotViscoElasticInterfaceMaterialWrapper
 
             material = MarmotViscoElasticInterfaceMaterialWrapper            
-            print('material is assigned to marmotViscoElasticInterfaceMaterial:'+'\n', material)
 
         elif strCaseCmp(materialName, "neohookewa"):
             from edelweissfe.materials.neohooke.neohookepencegouformulationa import (
