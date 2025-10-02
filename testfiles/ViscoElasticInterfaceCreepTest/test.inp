@@ -1,0 +1,83 @@
+*node
+** Our  nodes
+**
+*include, input=mesh/include_nodes.inp
+********************************** E L E M E N T S ****************************
+*element, type=C3D8, provider=edelweiss, elset=bottom-body
+*include, input=mesh/include_elset_bottom.inp
+
+*element, type=IQuad4, provider=interfaceelement, elset=interface-body
+*include, input=mesh/include_elset_interface.inp
+
+*element, type=C3D8, provider=edelweiss, elset=top-body
+*include, input=mesh/include_elset_top.inp
+
+********************************** N O D E S E T S **********************************
+*NSET, NSET=bottom-Z+
+*include, input=mesh/include_nset_bottom-Z+.inp
+*NSET, NSET=bottom-Y+
+*include, input=mesh/include_nset_bottom-Y+.inp
+*NSET, NSET=bottom-X+
+*include, input=mesh/include_nset_bottom-X+.inp
+*NSET, NSET=bottom-Z-
+*include, input=mesh/include_nset_bottom-Z-.inp
+*NSET, NSET=bottom-Y-
+*include, input=mesh/include_nset_bottom-Y-.inp
+*NSET, NSET=bottom-X-
+*include, input=mesh/include_nset_bottom-X-.inp
+*NSET, NSET=top-Z-
+*include, input=mesh/include_nset_top-Z-.inp
+*NSET, NSET=top-Y+
+*include, input=mesh/include_nset_top-Y+.inp
+*NSET, NSET=top-X-
+*include, input=mesh/include_nset_top-X-.inp
+*NSET, NSET=top-Z+
+*include, input=mesh/include_nset_top-Z+.inp
+*NSET, NSET=top-Y-
+*include, input=mesh/include_nset_top-Y-.inp
+*NSET, NSET=top-X+
+*include, input=mesh/include_nset_top-X+.inp
+
+** Node to be monitored
+*NSET, NSET=top-XYZ+
+6
+
+*material, name=LinearElastic, id=linearelastic_body_1, provider=edelweissmaterial
+**Isotropic
+**E    nu
+1.0, 0.3
+
+*material, name=LinearElastic, id=linearelastic_body_2, provider=edelweissmaterial
+**Isotropic
+**E    nu
+1.0, 0.3
+
+*material, name=marmotViscoElasticInterfacematerial , id=ViscoElasticInterfaceMaterial, provider = edelweissmaterial
+** E_M, nu_M, E_I, nu_I,   E_0, nu_0,     h,   m_Ju, n_Ju, nKelvin_Ju, minTau_Ju, m_Js,   n_Js, nKelvin_Js,  minTau_Js, timeToDays, MaterialID 
+   1.0,  0.3, 1.0,  0.3, 1e-08,  0.3, 0.001,   1e-2, 1e-6,          1,      1e-2, 1e-5,   1e10,          1,       1e-2,        1e0, 0
+
+*section, name=section1, material=linearelastic_body_2, type=solid
+bottom-body
+
+*section, name=section2, material=linearelastic_body_1, type=solid
+top-body
+
+*section, name=section3, material=ViscoElasticInterfaceMaterial, type=solid
+interface-body
+
+*job, name=IQuad4job, domain=3d
+*solver, solver=NIST, name=theSolver
+
+*step, solver=theSolver, maxInc=1, minInc=1, maxNumInc=1000, maxIter=1000, stepLength=1e-8
+options, category=NISTSolver, extrapolation=off
+
+dirichlet, name = bottom, nSet = bottom-Z-, field=displacement, 1=0, 2=0, 3=0, f(t)=t
+nodeforces, name = TopF, nSet = top-Z+, field=displacement, 1=1e-4, f(t)=t
+dirichlet, name = top, nSet = top-Z+, field=displacement, 2=0, 3=0, f(t)=t
+
+*step, solver=theSolver, maxInc=0.1, minInc=0.1, maxNumInc=1000, maxIter=1000, stepLength=0.1
+options, category=NISTSolver, extrapolation=off
+
+dirichlet, name = bottom, nSet = bottom-Z-, field=displacement, 1=0, 2=0, 3=0, f(t)=t
+nodeforces, name = TopF, nSet = top-Z+, field=displacement, 1=0, f(t)=1
+dirichlet, name = top, nSet = top-Z+, field=displacement, 2=0, 3=0, f(t)=t

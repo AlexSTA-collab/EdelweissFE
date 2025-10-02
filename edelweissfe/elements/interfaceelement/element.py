@@ -475,6 +475,7 @@ class InterfaceElement(BaseElement):
         )
         self._hasMaterial = True
         self._stateVarsRef = np.zeros([self._nInt, stateVarsSize])
+
         self._stateVars =[ 
             CaseInsensitiveDict(
                 {
@@ -598,7 +599,6 @@ class InterfaceElement(BaseElement):
             self._surface_stress_at_Gauss_X = copy.deepcopy(self._stateVarsTemp[i][3:int(3+self.nSpatialDimensions**2)].reshape((self.nSpatialDimensions,self.nSpatialDimensions)))
 
             self.material.assignStateVars(self._stateVarsTemp[i][36:])
-
             #print(self.n[i])
             if not self.planeStrain and self.nSpatialDimensions == 2:
                 raise Exception("Plain stress is not yet implemented in this element provider.")
@@ -613,6 +613,8 @@ class InterfaceElement(BaseElement):
                                             time[-1],
                                             dTime
                                             )
+            #if self._elNumber==1001 and i==0:
+            #    print(self._stateVarsTemp[i][36:])
 
             Z_ijkl = self._dStressdStrain[i][:9,:9].reshape((3,3,3,3))[:self.nSpatialDimensions,:self.nSpatialDimensions,:self.nSpatialDimensions,:self.nSpatialDimensions] #Pick only the appropriate spatial dimensions
             H_inv_ij = self._dStressdStrain[i][9:12, 9:12].reshape((3,3))[:self.nSpatialDimensions,:self.nSpatialDimensions]
@@ -659,7 +661,6 @@ class InterfaceElement(BaseElement):
             self._stateVarsTemp[i][3:int(3+self.nSpatialDimensions**2)] = self._surface_stress_at_Gauss.reshape(-1)
             self._stateVarsTemp[i][12:int(12+self._dU_GPs[i].shape[0])] += self._dU_GPs[i]
             self._stateVarsTemp[i][18:int(18+self._dSurface_strain_GPs[i].shape[0])]  += self._dSurface_strain_GPs[i]
-            
             #J_jumpv_temp, J_grad_s_v_temp = self.calculate_forward_gradient_X_right( self.N_matrix[i], self.B_matrix[i],\
             #                                                                         time, dTime, dU, i, P_jumpv[:,0], P_grad_s_v[:,0])
 

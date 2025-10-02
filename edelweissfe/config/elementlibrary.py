@@ -65,10 +65,9 @@ def getElementClass(elType: str, provider: str = None) -> type:
     type
         The element provider class type.
     """
-
     if provider is None:
         provider = "marmot"
-
+        
     if strCaseCmp(provider, "edelweiss"):
 
         return DisplacementElement
