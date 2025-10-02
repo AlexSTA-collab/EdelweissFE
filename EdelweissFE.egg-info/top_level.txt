@@ -1,5 +1,0 @@
-build
-doc
-edelweissfe
-examples
-testfiles
