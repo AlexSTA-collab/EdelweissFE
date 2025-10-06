@@ -26,26 +26,12 @@
 #  The full text of the license can be found in the file LICENSE.md at
 #  the top level directory of EdelweissFE.
 #  ---------------------------------------------------------------------
-import warnings
 
-from numpy._core.fromnumeric import shape
-#import importlib
-
-warnings.filterwarnings(
-    "ignore",
-    message=".*Conversion of an array with ndim > 0 to a scalar is deprecated.*",
-    category=DeprecationWarning
-)
 import basix
 import numpy as np
 import numpy.linalg as lin
 import copy
 
-warnings.simplefilter("ignore", DeprecationWarning)
-#importlib.reload(np)
-
-import sys
-sys.path.append('/home/alexsta1993/alexandros/EdelweissFE')
 from edelweissfe.elements.base.baseelement import BaseElement
 from edelweissfe.materials.marmotinterfacematerial.marmotinterfacematerialwrapper import MarmotInterfaceMaterialWrapper
 
