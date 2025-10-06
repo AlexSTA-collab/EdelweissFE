@@ -251,21 +251,23 @@ class AbqModelConstructor:
             materialID = materialDef.get("id", materialName)
 
             materialProperties = convertLinesToFlatArray(materialDef["data"], dtype=float)
-            materialClass = getMaterialClass(materialName, materialProvider)
+            MaterialClass = getMaterialClass(materialName, materialProvider)
 
-            if materialClass is None:  # for Marmot
-                model.materials[materialID] = {
-                    "name": materialName,
-                    "properties": materialProperties,
-                }
-            
-            else:  # for DisplacementElement, InterfaceElement
-                if materialID == "ElasticInterfaceMaterial":
-                    model.materials[materialID] = materialClass(materialProperties, 0)
-                elif materialID == "ViscoElasticInterfaceMaterial":
-                    model.materials[materialID] = materialClass(materialProperties, 1)
-                else:
-                    model.materials[materialID] = materialClass(materialProperties)
+            model.materials[materialID] = MaterialClass(materialProperties)
+
+            # if materialClass is None:  # for Marmot
+            #     model.materials[materialID] = {
+            #         "name": materialName,
+            #         "properties": materialProperties,
+            #     }
+
+            # else:  # for DisplacementElement, InterfaceElement
+            #     if materialID == "ElasticInterfaceMaterial":
+            #         model.materials[materialID] = materialClass(materialProperties, 0)
+            #     elif materialID == "ViscoElasticInterfaceMaterial":
+            #         model.materials[materialID] = materialClass(materialProperties, 1)
+            #     else:
+            #         model.materials[materialID] = materialClass(materialProperties)
 
         return model
 

@@ -141,7 +141,7 @@ class MarmotMaterialWrappingElement(BaseElement):
         """
         Not used by this wrapper"""
 
-    def setMaterial(self, materialName: str, materialProperties: np.ndarray):
+    def setMaterial(self, material):
         """Assign a material and material properties to the underlying Wrapper.
         Furthermore, create two sets of state vars:
 
@@ -150,14 +150,12 @@ class MarmotMaterialWrappingElement(BaseElement):
 
         Parameters
         ----------
-        materialName
-            The name of the requested material.
-        materialProperties
-            The properties for he requested material.
+        material
+            The material instance of type `MarmotMaterial <
         """
 
-        self._materialProperties = materialProperties
-        self._marmotMaterialWrapper.createMaterial(materialName, materialProperties)
+        self._materialProperties = material.properties
+        self._marmotMaterialWrapper.createMaterial(material.name, material.properties)
 
         self._nStateVars = self._marmotMaterialWrapper.getNumberOfRequiredStateVars()
 
