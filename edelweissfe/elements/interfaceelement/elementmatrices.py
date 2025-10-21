@@ -26,22 +26,9 @@
 #  The full text of the license can be found in the file LICENSE.md at
 #  the top level directory of EdelweissFE.
 #  ---------------------------------------------------------------------
-import warnings
-#import importlib
-
-warnings.filterwarnings(
-    "ignore",
-    message=".*Conversion of an array with ndim > 0 to a scalar is deprecated.*",
-    category=DeprecationWarning
-)
 
 from basix import CellType, ElementFamily
 import numpy as np
-from numpy._core.fromnumeric import shape
-#import warnings
-
-#warnings.filterwarnings("ignore", category=DeprecationWarning)
-#warnings.filterwarnings("ignore", category=FutureWarning)
 
 def computeJacobian(x: np.ndarray, element, quad_points, dim: int):
     """Get the Jacobi matrix for the element calculation.

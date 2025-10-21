@@ -27,7 +27,6 @@
 #  the top level directory of EdelweissFE.
 #  ---------------------------------------------------------------------
 import copy
-
 import basix
 import numpy as np
 import numpy.linalg as lin
