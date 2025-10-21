@@ -38,6 +38,7 @@ cdef class MarmotInterfaceMaterialWrapper:
 
         self._materialProperties = materialProperties
         self._materialID = materialID
+        print('HEllo:', self._materialProperties)
         cdef int nMaterialProperties = len(materialProperties)
 
         self._theMarmotInterfaceMaterialInstance = new LinearElasticInterface(&self._materialProperties[0], nMaterialProperties, self._materialID)

@@ -564,12 +564,12 @@ class InterfaceElement(BaseElement):
         self.number_of_top_dofs =int(self._nDof/2)
         self.number_of_top_strain_comp = int(self.nSpatialDimensions*self.nSpatialDimensions)
 
-        dU_GPs_top = np.einsum('qcm,m->qc',self.N_matrix,dU[:self.number_of_element_nodes].flatten())
-        dU_GPs_bottom = np.einsum('qcm,m->qc',self.N_matrix,dU[self.number_of_element_nodes:].flatten())
+        dU_GPs_bottom = np.einsum('qcm,m->qc',self.N_matrix,dU[:self.number_of_element_nodes].flatten())
+        dU_GPs_top = np.einsum('qcm,m->qc',self.N_matrix,dU[self.number_of_element_nodes:].flatten())
         self._dU_GPs = np.ascontiguousarray( np.hstack((dU_GPs_top, dU_GPs_bottom)))
 
-        dSurface_strain_GPs_top = np.einsum('qcm,m->qc',self.B_matrix,dU[:self.number_of_element_nodes].flatten())
-        dSurface_strain_GPs_bottom = np.einsum('qcm,m->qc',self.B_matrix,dU[self.number_of_element_nodes:].flatten())
+        dSurface_strain_GPs_bottom = np.einsum('qcm,m->qc',self.B_matrix,dU[:self.number_of_element_nodes].flatten())
+        dSurface_strain_GPs_top = np.einsum('qcm,m->qc',self.B_matrix,dU[self.number_of_element_nodes:].flatten())
 
         self._dSurface_strain_GPs = np.ascontiguousarray( np.hstack((dSurface_strain_GPs_top, dSurface_strain_GPs_bottom )))
 
@@ -586,6 +586,11 @@ class InterfaceElement(BaseElement):
 
             self.material.assignStateVars(self._stateVarsTemp[i][36:])
             #print(self.n[i])
+            if not np.isclose(np.einsum('i,i->', self.n[i], [0, 0, 1]), 1.0):
+                raise Exception(
+                f"The normal vector is not properly defined; check the element nodes ordering.\nNormal: {self.n[i]}"
+                )
+            
             if not self.planeStrain and self.nSpatialDimensions == 2:
                 raise Exception("Plain stress is not yet implemented in this element provider.")
                 # self.material.computePlaneStress(stress, self._dStressdStrain[i], self._dStrain[i], time, dTime)
@@ -599,14 +604,21 @@ class InterfaceElement(BaseElement):
                                             time[-1],
                                             dTime
                                             )
-            #if self._elNumber==1001 and i==0:
+            #if self._elNumber==62001 and i==0:
             #    print(self._stateVarsTemp[i][36:])
 
             Z_ijkl = self._dStressdStrain[i][:9,:9].reshape((3,3,3,3))[:self.nSpatialDimensions,:self.nSpatialDimensions,:self.nSpatialDimensions,:self.nSpatialDimensions] #Pick only the appropriate spatial dimensions
             H_inv_ij = self._dStressdStrain[i][9:12, 9:12].reshape((3,3))[:self.nSpatialDimensions,:self.nSpatialDimensions]
             H_inv_nF_ijk = self._dStressdStrain[i][:9,9:12].reshape((3,3,3))[:self.nSpatialDimensions,:self.nSpatialDimensions,:self.nSpatialDimensions]
             Yn_H_inv_Fn_ijkl = self._dStressdStrain[i][12:21,12:21].reshape((3,3,3,3))[:self.nSpatialDimensions,:self.nSpatialDimensions,:self.nSpatialDimensions,:self.nSpatialDimensions]
-            
+
+            #if self._elNumber==62001:
+            #    print("GP: ",i,"\n")
+            #    print("H_inv:\n",H_inv_ij,"\n")
+            #    print("Z_ijkl:\n",Z_ijkl,"\n")
+            #    print("self._N_matrix[i]:\n",self.N_matrix[i],"\n")
+            #    print("self._B_matrix[i]:\n",self.B_matrix[i],"\n")
+
             detJ = self.sqrt_detG[i]
         
             K_jumpu_jumpv = assign_K_jumpu_jumpv(self.N_matrix[i], H_inv_ij)
@@ -637,9 +649,19 @@ class InterfaceElement(BaseElement):
             
             # calculate P (jump contribution)
             P_jumpv = assign_P_jumpv(self.N_matrix[i], self._force_at_Gauss)#.reshape((self._nNodes,-1))[order]
+            
+            #if self._elNumber==62001:
+            #    print("self._N_matrix[i]:\n",self.N_matrix[i],"\n")
+            #    print("self._force_at_Gauss:\n",self._force_at_Gauss,"\n")
+            #    print("P_jumpv:\n",P_jumpv,"\n")
+            
             P -= (P_jumpv.flatten() * detJ * self._t * self._weight[i]) #2/h
             
             # calculate P (surface elasticity contribution)
+            #if self._elNumber==62001:
+            #    print("self._B_matrix","[i]:,", i," \n",self.B_matrix[i],"\n")
+            #    print("self._surface_stress_at_Gauss:\n",self._surface_stress_at_Gauss,"\n")
+            
             P_grad_s_v = assign_P_grad_s_v(self.B_matrix[i], self._surface_stress_at_Gauss)#.reshape((self._nNodes,-1))[order]
             P += (P_grad_s_v.flatten() * detJ * self._t * self._weight[i]) #h/2.
 

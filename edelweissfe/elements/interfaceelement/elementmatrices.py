@@ -54,7 +54,8 @@ def computeJacobian(x: np.ndarray, element, quad_points, dim: int):
     # keep only the unique nodal coordinates
     #print('Nodal coordinates per element:')
     #print(x)
-    x = x[:,:int(x.shape[1]/2)].transpose(1,0)
+    #x = x[:,:int(x.shape[1]/2)].transpose(1,0)
+    x = x[:, [0, 1, 3, 2]].transpose(1, 0)
     #print('Nodal points after make unique:\n',x)
 
     if (dim-1) == 1:
@@ -135,6 +136,12 @@ def compute_grad(x: np.ndarray, element, quad_points, nInt: int, dim: int):
 
     sqrt_detG = np.zeros((J_at_GPs.shape[0]))
     for qp in range(nInt):
+
+        #t1, t2 = J_at_GPs[qp][:,0], J_at_GPs[qp][:,1]
+        #n  = np.cross(t1, t2)
+        #print("Tangent vectors at GP {}: t1 {}, t2 {}".format(qp, t1, t2),'\n')
+        #print('Normal vector at GP {}: {}'.format(qp, n),'\n')
+
         G[qp] = np.einsum('ij,jk->ik',J_at_GPs[qp].T,J_at_GPs[qp])
         sqrt_detG[qp] = np.sqrt(np.linalg.det(G[qp]))
 
@@ -144,7 +151,13 @@ def compute_grad(x: np.ndarray, element, quad_points, nInt: int, dim: int):
 
         
         grad_phi_x_y_at_GPs[qp] = np.einsum('ij,jad->iad', J_pseudo_inverse_transpose, gradients[:,qp,:,:] )
-                
+
+    # --- reorder node axis from Basix local [0,1,3,2] -> global [0,1,2,3] ---
+    reorder_to_global = np.array([0, 1, 3, 2])
+    #print("grad_phi_x_y_at_GPs before reorder:\n", grad_phi_x_y_at_GPs.shape)
+    grad_phi_x_y_at_GPs = grad_phi_x_y_at_GPs[:, :, reorder_to_global]
+    # -------------------------------------------------------------------------
+
     grad_phi_x_y_at_GPs_stacked = np.repeat(
         grad_phi_x_y_at_GPs[np.newaxis, :, :, :], dim, axis=0
     )
@@ -258,13 +271,18 @@ def computeNOperator(x: np.ndarray, element, quad_points, dim: int):
     # Define interface element and quadrature rule
     #print(quad_points)
     N = element.tabulate(0, quad_points)[0]
-    #print('N', N.shape) 
+    # print('N before reorder:', N.shape)
+    #reorder_to_global = np.array([0, 1, 3, 2])
+    #N = N[:, reorder_to_global, :]
+    
+    #print('N', N.shape)
     # Get the stacked vector of interpolation functions with
     # Shape: (node, component, GP)
     N_stacked = np.repeat(N[np.newaxis,:, :, :], dim, axis=0)
     # Shape: (component, GP, node)
     
     N_stacked = np.transpose(N_stacked, (2, 0, 1, 3))
+
     # Shape: (node, component, GP),
     # In order to preserve more compatibility with the implemented functions
     #print('N_stacked',N_stacked.shape)
@@ -297,6 +315,7 @@ def interface_geometry(x: np.ndarray, element, quad_points, nInt: int, dim: int)
             
         else:
             tangents = np.einsum('ijk,jk->ik',grad_g[qp, :, :, :],  x[:,:int(x.shape[1]/2)].transpose(1,0)
+            #tangents = np.einsum('ijk,jk->ik',grad_g[qp, :, :, :],  x[:,[0,1,3,2]].transpose(1,0)
 )  # Extract tangent vectors
             normal[qp] = np.cross(tangents[:,0],tangents[:,1])  # Cross product of the tangent vectors
         
@@ -312,6 +331,7 @@ def interface_geometry(x: np.ndarray, element, quad_points, nInt: int, dim: int)
     #print('I:\n', I)
     #print('N:\n', N)
     #print('T:\n',T)
+    #print('Normal:\n',normal)
     return normal, N, T
 
 # Assignment routines for the stiffness matrices of the finte element
@@ -368,7 +388,7 @@ def assign_K_grad_s_u_jump_v(N_matrix, B_matrix, H_inv_nF_ijk):
 
 def assign_P_jumpv(N_matrix, force):
     P_v = np.einsum('im,mj->ij', N_matrix.T, force.reshape(3,1))
-    P_jumpv = np.vstack((P_v, -P_v))
+    P_jumpv = np.vstack((-P_v, P_v))
     return P_jumpv
 
 def assign_P_grad_s_v(B_matrix, surface_stress):
