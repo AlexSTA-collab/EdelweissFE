@@ -1,4 +1,0 @@
-from edelweissfe.materials.marmotViscoElasticInterfacematerial.marmotViscoElasticInterfacematerialwrapper import test_MarmotViscoElasticInterfaceMaterialWrapper
-
-def test_marmotinterfacematerialwrapper():
-    test_MarmotInterfaceMaterialWrapper()

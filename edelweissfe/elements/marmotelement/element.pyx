@@ -170,23 +170,23 @@ cdef class MarmotElementWrapper:
         """Let the underlying MarmotElement initialize itself"""
         self.marmotElement.initializeYourself()
 
-    def setMaterial(self, materialName, materialProperties):
+    def setMaterial(self, material):
         """Assign a material and material properties to the underlying MarmotElement.
         Furthermore, create two sets of state vars:
 
             - the actual set,
             - and a temporary set for backup in nonlinear iteration schemes.
         """
-        self._materialProperties =  materialProperties
+        self._materialProperties =  material.properties
         try:
             self.marmotElement.assignProperty(
                     MarmotMaterialSection(
                             MarmotMaterialFactory.getMaterialCodeFromName(
-                                    materialName.upper().encode('UTF-8')),
+                                    material.name.upper().encode('UTF-8')),
                             &self._materialProperties[0],
                             self._materialProperties.shape[0] ) )
         except IndexError:
-            raise NotImplementedError("Marmot material {:} not found in library.".format(materialName))
+            raise NotImplementedError("Marmot material {:} not found in library.".format(material.name))
 
         self.nStateVars =           self.marmotElement.getNumberOfRequiredStateVars()
 

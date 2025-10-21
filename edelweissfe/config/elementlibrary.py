@@ -46,7 +46,6 @@ from edelweissfe.elements.displacementelement.element import (  # noqa: F401
 from edelweissfe.elements.displacementtlelement.element import (  # noqa: F401
     DisplacementTLElement,
 )
-from edelweissfe.elements.library import elLibrary
 from edelweissfe.utils.misc import strCaseCmp
 
 
@@ -67,16 +66,18 @@ def getElementClass(elType: str, provider: str = None) -> type:
     """
     if provider is None:
         provider = "marmot"
-        
-    if strCaseCmp(provider, "edelweiss"):
 
-        return DisplacementElement
-    
-    if  strCaseCmp(provider, "interfaceelement"):
+    if strCaseCmp(provider, "edelweiss"):
+        if "TL" in elType:
+            return DisplacementTLElement
+        else:
+            return DisplacementElement
+
+    if strCaseCmp(provider, "interfaceelement"):
         from edelweissfe.elements.interfaceelement.element import InterfaceElement
 
         return InterfaceElement
-    
+
     if provider.lower() == "marmot":
         from edelweissfe.elements.marmotelement.element import MarmotElementWrapper
 
