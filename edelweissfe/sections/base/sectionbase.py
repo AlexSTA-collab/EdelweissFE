@@ -31,8 +31,6 @@
 
 from abc import ABC, abstractmethod
 
-import numpy as np
-
 from edelweissfe.utils.math import createFunction
 from edelweissfe.utils.misc import (
     convertAssignmentsToStringDictionary,
@@ -79,7 +77,7 @@ class Section(ABC):
                 self.materialPropertiesFileName = definition.get("filename")
             else:
                 elSetNames.extend(line)
-         
+
         self.elSets = [model.elementSets[setName] for setName in elSetNames]
         self.material = model.materials[materialName]
 
@@ -87,16 +85,18 @@ class Section(ABC):
         if any(self.materialParameterFromFieldDefs):
             for elSet in self.elSets:
                 for el in elSet:
-                    if isinstance(self.material, dict):  # for marmotmaterial provider
-                        modifiedMaterial = self.material.copy()
-                        modifiedMaterial["properties"] = self.propertiesFromField(el, self.material, model, True)
-                    else:  # for edelweissmaterial provider
-                        materialType = type(self.material)
-                        modifiedProperties = self.propertiesFromField(el, self.material, model, False)
-                        modifiedMaterial = materialType(modifiedProperties)
-                        if hasattr(self.material, "_materialEnergy"):  # for autodiff materials
-                            modifiedMaterial.setEnergyFunction(self.material._materialEnergy)
+                    modifiedMaterial = self.propertiesFromField(el, self.material, model)
                     self.assignSectionPropertiesToElement(el, material=modifiedMaterial)
+                    # if isinstance(self.material, dict):  # for marmotmaterial provider
+                    #     modifiedMaterial = self.material.copy()
+                    #     modifiedMaterial["properties"] = self.propertiesFromField(el, self.material, model, True)
+                    # else:  # for edelweissmaterial provider
+                    #     materialType = type(self.material)
+                    #     modifiedProperties = self.propertiesFromField(el, self.material, model, False)
+                    #     modifiedMaterial = materialType(modifiedProperties)
+                    #     if hasattr(self.material, "_materialEnergy"):  # for autodiff materials
+                    #         modifiedMaterial.setEnergyFunction(self.material._materialEnergy)
+                    # self.assignSectionPropertiesToElement(el, material=modifiedMaterial)
         else:
             for elSet in self.elSets:
                 for el in elSet:
@@ -111,21 +111,28 @@ class Section(ABC):
     def assignSectionPropertiesToElement(self, element, **kwargs):
         pass
 
-    def propertiesFromField(self, el, material, model, isMarmotMaterial):
+    def propertiesFromField(self, el, material, model):
         coordinatesAtCenter = el.getCoordinatesAtCenter()
-        materialProperties = np.copy(material["properties"]) if isMarmotMaterial else material.materialProperties.copy()
-        isCustomMaterial = isinstance(materialProperties, dict)
+
+        import copy
+
+        materialCopy = copy.deepcopy(material)
+
+        # materialProperties = material.properties.copy()
+        # materialProperties = np.copy(material["properties"]) if isMarmotMaterial else material.materialProperties.copy()
+        # isCustomMaterial = isinstance(materialProperties, dict)
 
         for definition in self.materialParameterFromFieldDefs:
-            index = int(definition["index"]) if not isCustomMaterial else definition["index"]
+            index = int(definition["index"])
+            # index = int(definition["index"]) if not isCustomMaterial else definition["index"]
             fieldValue = model.analyticalFields[definition["field"]].evaluateAtCoordinates(coordinatesAtCenter)[0][0]
-            parameterValue = materialProperties[index]
+            parameterValue = material.properties[index]
             if strCaseCmp(definition["type"], "setToValue"):
-                materialProperties[index] = definition["expression"](parameterValue, fieldValue)
+                materialCopy.properties[index] = definition["expression"](parameterValue, fieldValue)
             elif strCaseCmp(definition["type"], "scale"):
-                materialProperties[index] *= definition["expression"](parameterValue, fieldValue)
+                materialCopy.properties[index] *= definition["expression"](parameterValue, fieldValue)
 
-        return materialProperties
+        return materialCopy
 
     def exportMaterialPropertiesToFile(self, elSets):
         with open("{:}.csv".format(self.materialPropertiesFileName), "w+") as f:

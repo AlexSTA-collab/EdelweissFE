@@ -140,8 +140,8 @@ class DisplacementElement(BaseElement):
 
     def __init__(self, elementType: str, elNumber: int):
         properties = elLibrary[elementType]
-        if eval(properties["elClass"]) is not DisplacementElement:
-            raise Exception("Something went wrong with the element initialization!")
+        # if eval(properties["elClass"]) is not DisplacementElement:
+        #     raise Exception("Something went wrong with the element initialization!")
         self._elNumber = elNumber
         self._nNodes = properties["nNodes"]
         self._nDof = properties["nDof"]
@@ -320,20 +320,20 @@ class DisplacementElement(BaseElement):
         self._stateVarsTemp = [self._stateVarsRef[i].copy() for i in range(self._nInt)].copy()
         # strain increment
         self._dStrain[:, self._activeVoigtIndices] = np.array([self.B[i] @ dU for i in range(self._nInt)])
-        
-        #if self._elNumber == 3:
+
+        # if self._elNumber == 3:
         #    print('Before Assembly')
         #    print('P norm', np.linalg.norm(P,1))
         #    print('K norm:', np.linalg.norm(K,1))
         #    print('stateVars_norm:', np.linalg.norm(self._stateVarsTemp,1))
         #    print('material stateVarsTemp:', np.linalg.norm(self._stateVarsTemp[-1][12:],1))
         #    print('dStrain:', np.linalg.norm(self._dStrain,1))
-        
+
         for i in range(self._nInt):
             # get stress and strain
             stress = self._stateVarsTemp[i][0:6]
-            #print('Hexa element:\n', self._elNumber, i)
-            #print('Hexa stress before material:\n', stress)
+            # print('Hexa element:\n', self._elNumber, i)
+            # print('Hexa stress before material:\n', stress)
             self.material.assignCurrentStateVars(self._stateVarsTemp[i][12:])
             if not self._isHyperelastic:
                 # use 3D for 2D planeStrain
@@ -353,15 +353,15 @@ class DisplacementElement(BaseElement):
             K += B.T @ C @ B * detJ * self._t * self._weight[i]
             # calculate P
 
-            #print('Hexa stress after material:\n', stress)
-            #print('Hexa P:\n', P)
+            # print('Hexa stress after material:\n', stress)
+            # print('Hexa P:\n', P)
             P -= B.T @ stress[self._activeVoigtIndices] * detJ * self._weight[i] * self._t
-            #print('Hexa P after assignment:\n', P)
+            # print('Hexa P after assignment:\n', P)
             # update strain in stateVars
             self._stateVarsTemp[i][6:12] += self._dStrain[i]
 
-        #if self._elNumber == 3:
-            
+        # if self._elNumber == 3:
+
         #    print('After assembly')
         #    print('P norm', np.linalg.norm(P,1))
         #    print('K norm:', np.linalg.norm(K,1))

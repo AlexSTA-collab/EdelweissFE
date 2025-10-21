@@ -45,14 +45,25 @@ def getMaterialClass(materialName: str, provider: str = None) -> type:
         The material provider class type.
     """
 
-    if provider is None:
-        provider = "MarmotMaterial"
+    # if provider is None:
+    #     provider = "MarmotMaterial"
 
-    if strCaseCmp(provider, "marmotmaterial"):
+    if provider is None or strCaseCmp(provider, "marmotmaterial"):
 
-        return None
+        from edelweissfe.materials.marmotmaterial.marmotmaterial import MarmotMaterial
 
-    if strCaseCmp(provider, "edelweissmaterial"):
+        return lambda x: MarmotMaterial(materialName, x)
+
+        # return None
+
+    if strCaseCmp(provider, "marmotmaterialhypoelasticinterface"):
+        from edelweissfe.materials.marmotmaterialhypoelasticinterface.marmotmaterialhypoelasticinterfacewrapper import (
+            MarmotInterfaceMaterialWrapper,
+        )
+
+        return lambda x: MarmotInterfaceMaterialWrapper(materialName, x)
+
+    if strCaseCmp(provider, "edelweiss"):
         if strCaseCmp(materialName, "linearelastic"):
             from edelweissfe.materials.linearelastic.linearelastic import (
                 LinearElasticMaterial,
@@ -63,16 +74,16 @@ def getMaterialClass(materialName: str, provider: str = None) -> type:
             from edelweissfe.materials.vonmises.vonmises import VonMisesMaterial
 
             material = VonMisesMaterial
-        
-        elif strCaseCmp(materialName, "marmotinterfacematerial"):
-            from edelweissfe.materials.marmotinterfacematerial.marmotinterfacematerialwrapper import MarmotInterfaceMaterialWrapper
 
-            material = MarmotInterfaceMaterialWrapper            
+        # elif strCaseCmp(materialName, "marmotinterfacematerial"):
+        #     from edelweissfe.materials.marmotinterfacematerial.marmotinterfacematerialwrapper import MarmotInterfaceMaterialWrapper
 
-        elif strCaseCmp(materialName, "marmotViscoElasticInterfacematerial"):
-            from edelweissfe.materials.marmotViscoElasticInterfacematerial.marmotViscoElasticInterfacematerialwrapper import MarmotViscoElasticInterfaceMaterialWrapper
+        #     material = MarmotInterfaceMaterialWrapper
 
-            material = MarmotViscoElasticInterfaceMaterialWrapper            
+        # elif strCaseCmp(materialName, "marmotViscoElasticInterfacematerial"):
+        #     from edelweissfe.materials.marmotViscoElasticInterfacematerial.marmotViscoElasticInterfacematerialwrapper import MarmotViscoElasticInterfaceMaterialWrapper
+
+        #     material = MarmotViscoElasticInterfaceMaterialWrapper
 
         elif strCaseCmp(materialName, "neohookewa"):
             from edelweissfe.materials.neohooke.neohookepencegouformulationa import (
@@ -132,3 +143,5 @@ def getMaterialClass(materialName: str, provider: str = None) -> type:
             raise Exception("This material type doesn't exist (yet). Chosen material was: " + materialName)
 
         return material
+    else:
+        raise Exception("This material provider doesn't exist (yet). Chosen provider was: " + provider)

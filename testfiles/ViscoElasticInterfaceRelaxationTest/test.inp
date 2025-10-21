@@ -42,18 +42,18 @@
 *NSET, NSET=top-XYZ+
 6
 
-*material, name=LinearElastic, id=linearelastic_body_1, provider=edelweissmaterial
+*material, name=LinearElastic, id=linearelastic_body_1, provider=edelweiss
 **Isotropic
 **E    nu
 1.0, 0.3
 
-*material, name=LinearElastic, id=linearelastic_body_2, provider=edelweissmaterial
+*material, name=LinearElastic, id=linearelastic_body_2, provider=edelweiss
 **Isotropic
 **E    nu
 1.0, 0.3
 
-*material, name=marmotViscoElasticInterfacematerial , id=ViscoElasticInterfaceMaterial, provider = edelweissmaterial
-** E_M, nu_M, E_I, nu_I,   E_0, nu_0,     h,   m_Ju, n_Ju, nKelvin_Ju, minTau_Ju, m_Js,   n_Js, nKelvin_Js,  minTau_Js, timeToDays, MaterialID 
+*material, name=LinearViscoElasticInterface, id=ViscoElasticInterfaceMaterial_1, provider = marmotmaterialhypoelasticinterface
+** E_M, nu_M, E_I, nu_I,   E_0, nu_0,     h,   m_Ju, n_Ju, nKelvin_Ju, minTau_Ju, m_Js,   n_Js, nKelvin_Js,  minTau_Js, timeToDays, MaterialID
    1.0,  0.3, 1.0,  0.3, 1e-08,  0.3, 0.001,   1e-2, 1e-6,          1,      1e-2, 1e-5,   1e10,          1,       1e-2,        1e0, 0
 
 *section, name=section1, material=linearelastic_body_2, type=solid
@@ -62,21 +62,21 @@ bottom-body
 *section, name=section2, material=linearelastic_body_1, type=solid
 top-body
 
-*section, name=section3, material=ViscoElasticInterfaceMaterial, type=solid
+*section, name=section3, material=ViscoElasticInterfaceMaterial_1, type=solid
 interface-body
 
 *job, name=IQuad4job, domain=3d
 *solver, solver=NIST, name=theSolver
 
 *step, solver=theSolver, maxInc=1, minInc=1, maxNumInc=1000, maxIter=1000, stepLength=1e-8
-options, category=NISTSolver, extrapolation=off 
+options, category=NISTSolver, extrapolation=off
 
 dirichlet, name = bottom,   nSet = bottom-Z-,  field=displacement, 1=-0.1, 2=0, 3=0, f(t)=t
 dirichlet, name = top,      nSet = top-Z+,  field=displacement, 1=0.1, 2=0, 3=0, f(t)=t
 
 **step, solver=theSolver, maxInc=0.025, minInc=0.025, maxNumInc=1000, maxIter=1000, stepLength= 0.1
 *step, solver=theSolver, maxInc=0.1, minInc=0.1, maxNumInc=1000, maxIter=1000, stepLength= 0.1
-options, category=NISTSolver, extrapolation=off 
+options, category=NISTSolver, extrapolation=off
 
 dirichlet, name = bottom,   nSet = bottom-Z-,  field=displacement, 1=-0.1, 2=0, 3=0, f(t)=1
 dirichlet, name = top,      nSet = top-Z+,  field=displacement, 1=0.1, 2=0, 3=0, f(t)=1

@@ -75,9 +75,9 @@ class StepAction(StepActionBase):
         theCurrentProperty = self.f_t(timeStep.stepTime)
         self.journal.message(
             "Changing property[{:}] of material {:} to {:}".format(
-                self.theIndex, self.theMaterial["name"], theCurrentProperty
+                self.theIndex, self.theMaterial.name, theCurrentProperty
             ),
             self.name,
         )
 
-        self.theMaterial["properties"][self.theIndex] = theCurrentProperty
+        self.theMaterial.properties[self.theIndex] = theCurrentProperty

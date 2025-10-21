@@ -32,28 +32,19 @@ from libcpp.string cimport string
 from libcpp.vector cimport vector
 
 
-# cdef extern from "Marmot/Marmot.h" namespace "MarmotLibrary" nogil:
+cdef extern from "Marmot/MarmotMaterialHypoElasticInterface.h" namespace "MarmotLibrary" nogil:
 
-    # cdef cppclass MarmotMaterialFactory:
-    #     @staticmethod
-    #     int getMaterialCodeFromName(const string& materialName) except +IndexError
-
-    #     @staticmethod
-    #     MarmotMaterial* createMaterial(int materialCode, const double* materialProperties, int nMaterialProperties, int materialNumber) except +IndexError
+    cdef cppclass MarmotMaterialHypoElasticInterfaceFactory:
+        @staticmethod
+        MarmotMaterialHypoElasticInterface* createMaterial(const string& materialName, const double* materialProperties, int nMaterialProperties, int materialNumber) except +IndexError
 
 cdef extern from "Marmot/MarmotUtils.h":
     cdef struct StateView:
         double *stateLocation
         int stateSize
 
-# cdef extern from "Marmot/MarmotMaterial.h":
-#     cdef cppclass MarmotMaterial nogil:
-#         pass
-
-cdef extern from "Marmot/LinearElasticInterface.h" namespace "Marmot::Materials" nogil:
-    cdef cppclass LinearElasticInterface nogil:
-    
-        LinearElasticInterface( const double* materialProperties, int nMaterialProperties, int materialNumber ) except+
+cdef extern from "Marmot/MarmotMaterialHypoElasticInterface.h"  nogil:
+    cdef cppclass MarmotMaterialHypoElasticInterface nogil:
 
         void assignStateVars( double* stateVars, int nStateVars )
 

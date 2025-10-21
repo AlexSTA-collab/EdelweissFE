@@ -12,18 +12,15 @@ from libcpp.string cimport string
 from libcpp.vector cimport vector
 
 
-cdef class MarmotViscoElasticInterfaceMaterialWrapper:
+cdef class MarmotInterfaceMaterialWrapper:
 
-    cdef LinearViscoElasticInterface* _theMarmotInterfaceMaterialInstance
+    cdef MarmotMaterialHypoElasticInterface* _theMarmotInterfaceMaterialInstance
     cdef double[::1] _stateVars
     cdef double[::1] _materialProperties
     cdef int _materialID
 
-    def __init__(self, double[::1] materialProperties, int materialID):
-        pass
 
-
-    def __cinit__(self, double[::1] materialProperties, int materialID):
+    def __cinit__(self, str materialName, double[::1] materialProperties):
         """This C-level method is responsible for actually instancing the Marmot material.
         In contrast to the __init__ method, it is guaranteed that this method is called only once.
 
@@ -31,15 +28,20 @@ cdef class MarmotViscoElasticInterfaceMaterialWrapper:
         ----------
         materialProperties : np.ndarray
             The material properties of the material.
-        materialID : int
-            The material ID of the material (for debugging purposes).
         """
 
 
         self._materialProperties = materialProperties
-        self._materialID = materialID
+        self._materialID = 1
         cdef int nMaterialProperties = len(materialProperties)
-        self._theMarmotInterfaceMaterialInstance = new LinearViscoElasticInterface(&self._materialProperties[0], nMaterialProperties, self._materialID)
+
+        try:
+            self._theMarmotInterfaceMaterialInstance = MarmotMaterialHypoElasticInterfaceFactory.createMaterial(materialName.upper().encode('utf-8'),
+                                                                                                                &self._materialProperties[0],
+                                                                                                                nMaterialProperties,
+                                                                                                                self._materialID)
+        except IndexError:
+            raise NotImplementedError("Marmot interface material {:} not found in library.".format(materialName))
 
     def computeStress(self,
                       double[::1]  force,
@@ -63,7 +65,8 @@ cdef class MarmotViscoElasticInterfaceMaterialWrapper:
             &normal[0],
             &timeOld,
             dT,
-            pNewDT) 
+            pNewDT)
+
         if pNewDT < 1.0:
             raise CutbackRequest("Material requests for a cutback!", pNewDT)
 
@@ -92,22 +95,18 @@ cdef class MarmotViscoElasticInterfaceMaterialWrapper:
         # this is the destructor
         del self._theMarmotInterfaceMaterialInstance
 
-def test_MarmotViscoElasticInterfaceMaterialWrapper():
+def test_MarmotInterfaceMaterialWrapper():
 
-    print("Testing MarmotInterfaceMaterialWrapper...") 
-    marmotMaterialViscoElasticInterfaceWrapper = MarmotViscoElasticInterfaceMaterialWrapper(np.array([1.0,  0.3, 1.0,  0.3, 1e8,  0.3,  1e-5, 1, 2, 1, 0.01, 1, 2, 1, 0.01, 86400]), 2)
+    print("Testing MarmotInterfaceMaterialWrapper...")
+    marmotMaterialInterfaceWrapper = MarmotInterfaceMaterialWrapper("LINEARELASTICINTERFACE", np.array([100, .3, 200, .3, 400, .2, 1e0]))
 
     force = np.array([100., 200., 300.])
     surface_stress = np.ones((3,3))
-    dStress_dStrain = np.ones((21,21)) * 2 
+    dStress_dStrain = np.ones((21,21)) * 2
     dU = np.ones(6) * 3
     dSurface_strain = np.ones(18) * 4
     normal = np.ones(3) * 5
     timeOld = 0.0
     dT = 0.1
 
-    marmotMaterialViscoElasticInterfaceWrapper.computeStress(force, surface_stress, dStress_dStrain, dU, dSurface_strain, normal, timeOld, dT)
-
-    
-
-
+    marmotMaterialInterfaceWrapper.computeStress(force, surface_stress, dStress_dStrain, dU, dSurface_strain, normal, timeOld, dT)
