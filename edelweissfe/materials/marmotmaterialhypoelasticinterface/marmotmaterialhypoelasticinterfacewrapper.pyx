@@ -36,6 +36,7 @@ cdef class MarmotInterfaceMaterialWrapper:
         cdef int nMaterialProperties = len(materialProperties)
 
         try:
+            print("HELLO:",materialName.upper())
             self._theMarmotInterfaceMaterialInstance = MarmotMaterialHypoElasticInterfaceFactory.createMaterial(materialName.upper().encode('utf-8'),
                                                                                                                 &self._materialProperties[0],
                                                                                                                 nMaterialProperties,

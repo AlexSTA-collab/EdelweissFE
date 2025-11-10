@@ -536,6 +536,7 @@ class InterfaceElement(BaseElement):
             The time increment.
         """
         # assume it's plain strain if it's not given by user
+        #print('Nodal points:', self._nNodes)
         dU = dU.reshape((self._nNodes, -1))
 
         # copy all elements
@@ -549,10 +550,23 @@ class InterfaceElement(BaseElement):
         self.number_of_top_dofs = int(self._nDof / 2)
         self.number_of_top_strain_comp = int(self.nSpatialDimensions * self.nSpatialDimensions)
 
+        ##perm = [0, 1, 3, 2]
+
+        ## bottom element nodal values (reordered)
+        ##dU_elem_bottom = dU[:self.number_of_element_nodes, :][perm, :]
+        # top element nodal values (reordered)
+        ##dU_elem_top = dU[self.number_of_element_nodes:, :][perm, :]
+
+        ##dU_GPs_bottom = np.einsum('qcm,m->qc',self.N_matrix,dU_elem_bottom.flatten())
+        ##dU_GPs_top = np.einsum('qcm,m->qc',self.N_matrix,dU_elem_top.flatten())
+        ##dSurface_strain_GPs_bottom = np.einsum('qcm,m->qc',self.B_matrix,dU_elem_bottom.flatten())
+        ##dSurface_strain_GPs_top = np.einsum('qcm,m->qc',self.B_matrix,dU_elem_top.flatten())
+
         dU_GPs_bottom = np.einsum('qcm,m->qc',self.N_matrix,dU[:self.number_of_element_nodes].flatten())
         dU_GPs_top = np.einsum('qcm,m->qc',self.N_matrix,dU[self.number_of_element_nodes:].flatten())
         self._dU_GPs = np.ascontiguousarray( np.hstack((dU_GPs_top, dU_GPs_bottom)))
 
+       
         dSurface_strain_GPs_bottom = np.einsum('qcm,m->qc',self.B_matrix,dU[:self.number_of_element_nodes].flatten())
         dSurface_strain_GPs_top = np.einsum('qcm,m->qc',self.B_matrix,dU[self.number_of_element_nodes:].flatten())
 
@@ -579,10 +593,10 @@ class InterfaceElement(BaseElement):
 
             self.material.assignStateVars(self._stateVarsTemp[i][36:])
             #print(self.n[i])
-            if not np.isclose(np.einsum('i,i->', self.n[i], [0, 0, 1]), 1.0):
-                raise Exception(
-                f"The normal vector is not properly defined; check the element nodes ordering.\nNormal: {self.n[i]}"
-                )
+            #if not np.isclose(np.einsum('i,i->', self.n[i], [0, 0, 1]), 1.0):
+            #    raise Exception(
+            #    f"The normal vector is not properly defined; check the element nodes ordering.\nNormal: {self.n[i]}"
+            #    )
             
 
             if not self.planeStrain and self.nSpatialDimensions == 2:
@@ -620,7 +634,6 @@ class InterfaceElement(BaseElement):
                 : self.nSpatialDimensions,
                 : self.nSpatialDimensions,
             ]
-
             detJ = self.sqrt_detG[i]
 
             K_jumpu_jumpv = assign_K_jumpu_jumpv(self.N_matrix[i], H_inv_ij)

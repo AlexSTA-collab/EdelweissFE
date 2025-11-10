@@ -124,7 +124,10 @@ def compute_grad(x: np.ndarray, element, quad_points, nInt: int, dim: int):
     """
 
     J_at_GPs, gradients = computeJacobian(x, element, quad_points, dim)
+    #print('quad points\n',quad_points)
     #print('jacobians:\n',J_at_GPs)
+    #print('gradients:\n',gradients)
+    
     #print('gradients shape', gradients.shape)
     grad_phi_x_y_at_GPs_shape = np.append(J_at_GPs.shape[:2],gradients.shape[2:])
 
@@ -154,13 +157,14 @@ def compute_grad(x: np.ndarray, element, quad_points, nInt: int, dim: int):
 
     # --- reorder node axis from Basix local [0,1,3,2] -> global [0,1,2,3] ---
     reorder_to_global = np.array([0, 1, 3, 2])
-    #print("grad_phi_x_y_at_GPs before reorder:\n", grad_phi_x_y_at_GPs.shape)
+    #print("grad_phi_x_y_at_GPs before reorder:\n", grad_phi_x_y_at_GPs)
     grad_phi_x_y_at_GPs = grad_phi_x_y_at_GPs[:, :, reorder_to_global]
     # -------------------------------------------------------------------------
 
     grad_phi_x_y_at_GPs_stacked = np.repeat(
         grad_phi_x_y_at_GPs[np.newaxis, :, :, :], dim, axis=0
     )
+    #print("Determinant of the pseudojacobian:", sqrt_detG)
     return grad_phi_x_y_at_GPs_stacked, sqrt_detG
 
 
@@ -269,13 +273,22 @@ def computeNOperator(x: np.ndarray, element, quad_points, dim: int):
         Dimension the element has.
     """
     # Define interface element and quadrature rule
-    #print(quad_points)
+    #print("Quad points",quad_points)
+    #nodal_points = element.points
+    #tab = element.tabulate(0, nodal_points)
+    #Ncheck = tab[0, :, :]
+    #print('Nodal points:', nodal_points)
+    #print('Nodal check:', Ncheck)
+
+    # Evaluate shape functions at quadrature points
+    #print("distances check:", np.linalg.norm(x[:2,:4]-x[:2,4:],1))
+    #if np.linalg.norm(x[:2,:4]-x[:2,4:],1) < 0.:
+    #    print("Check element coordinates:", x[:,:4]-x[:,4:])
+
     N = element.tabulate(0, quad_points)[0]
-    # print('N before reorder:', N.shape)
-    #reorder_to_global = np.array([0, 1, 3, 2])
-    #N = N[:, reorder_to_global, :]
+    reorder_to_global = np.array([0, 1, 3, 2])
+    N = N[:, reorder_to_global, :]
     
-    #print('N', N.shape)
     # Get the stacked vector of interpolation functions with
     # Shape: (node, component, GP)
     N_stacked = np.repeat(N[np.newaxis,:, :, :], dim, axis=0)
@@ -374,15 +387,15 @@ def assign_K_grad_s_u_grad_s_v(B_matrix, Z_ijkl):
 
 def assign_K_jump_u_grad_s_v(N_matrix, B_matrix, H_inv_nF_ijk):
     K_jump_u_grad_s_v = np.einsum('im,mn,nj->ij', N_matrix.T, H_inv_nF_ijk.reshape(3,9), B_matrix)
-    K_jump_u_grad_s_v = np.hstack(( K_jump_u_grad_s_v, K_jump_u_grad_s_v))
-    K_jump_u_grad_s_v = np.vstack(( -K_jump_u_grad_s_v, -K_jump_u_grad_s_v))
+    K_jump_u_grad_s_v = np.hstack(( -K_jump_u_grad_s_v, K_jump_u_grad_s_v))
+    K_jump_u_grad_s_v = np.vstack(( -K_jump_u_grad_s_v, K_jump_u_grad_s_v))
     K_jump_u_grad_s_v = 1./2. *  K_jump_u_grad_s_v
     return K_jump_u_grad_s_v
 
 def assign_K_grad_s_u_jump_v(N_matrix, B_matrix, H_inv_nF_ijk):
     K_grad_s_u_jump_v = np.einsum('im,mn,nj->ij', B_matrix.T, H_inv_nF_ijk.reshape(3,9).T, N_matrix)
-    K_grad_s_u_jump_v = np.hstack(( K_grad_s_u_jump_v, K_grad_s_u_jump_v))
-    K_grad_s_u_jump_v = np.vstack(( -K_grad_s_u_jump_v, -K_grad_s_u_jump_v))
+    K_grad_s_u_jump_v = np.hstack(( -K_grad_s_u_jump_v, -K_grad_s_u_jump_v))
+    K_grad_s_u_jump_v = np.vstack(( K_grad_s_u_jump_v, K_grad_s_u_jump_v))
     K_grad_s_u_jump_v = 1./2. *  K_grad_s_u_jump_v
     return K_grad_s_u_jump_v
 
