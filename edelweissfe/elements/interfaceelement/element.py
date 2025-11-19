@@ -435,7 +435,11 @@ class InterfaceElement(BaseElement):
         stateVarsSize = (3 + 9) + 2 * (3 + 9) + self.material.getNumberOfRequiredStateVars()
         self._matrixSize = 21
 
-        self._dStressdStrain = np.zeros([self._nInt, self._matrixSize, self._matrixSize])
+        self._H_inv_ij = np.zeros([self._nInt, 3, 3])
+        self._Z_ijkl = np.zeros([self._nInt, 3, 3, 3, 3])
+        self._H_inv_nF_ijk = np.zeros([self._nInt, 3, 3, 3])
+        self._Yn_H_inv_Fn_ijkl = np.zeros([self._nInt, 3, 3, 3, 3])
+
         self._hasMaterial = True
         self._stateVarsRef = np.zeros([self._nInt, stateVarsSize])
 
@@ -566,7 +570,6 @@ class InterfaceElement(BaseElement):
         dU_GPs_top = np.einsum('qcm,m->qc',self.N_matrix,dU[self.number_of_element_nodes:].flatten())
         self._dU_GPs = np.ascontiguousarray( np.hstack((dU_GPs_top, dU_GPs_bottom)))
 
-       
         dSurface_strain_GPs_bottom = np.einsum('qcm,m->qc',self.B_matrix,dU[:self.number_of_element_nodes].flatten())
         dSurface_strain_GPs_top = np.einsum('qcm,m->qc',self.B_matrix,dU[self.number_of_element_nodes:].flatten())
 
@@ -606,7 +609,10 @@ class InterfaceElement(BaseElement):
                 self.material.computeStress(
                     self._force_at_Gauss,
                     self._surface_stress_at_Gauss,
-                    self._dStressdStrain[i],
+                    self._H_inv_ij[i],
+                    self._Z_ijkl[i],
+                    self._H_inv_nF_ijk[i],
+                    self._Yn_H_inv_Fn_ijkl[i], 
                     self._dU_GPs[i],
                     self._dSurface_strain_GPs[i],
                     self.n[i],
@@ -616,51 +622,56 @@ class InterfaceElement(BaseElement):
             # if self._elNumber==1001 and i==0:
             #    print(self._stateVarsTemp[i][36:])
             
-            Z_ijkl = self._dStressdStrain[i].T[:9, :9].reshape((3, 3, 3, 3))[
+            Z_ijkl = self._Z_ijkl[i][
                 : self.nSpatialDimensions,
                 : self.nSpatialDimensions,
                 : self.nSpatialDimensions,
                 : self.nSpatialDimensions,
             ]  # Pick only the appropriate spatial dimensions
-            H_inv_ij = self._dStressdStrain[i].T[9:12, 9:12].reshape((3, 3))[
-                : self.nSpatialDimensions, : self.nSpatialDimensions
+            H_inv_ij = self._H_inv_ij[i][
+                : self.nSpatialDimensions, 
+                : self.nSpatialDimensions,
             ]
            
-            H_inv_nF_ijk = self._dStressdStrain[i].T[:9, 9:12].reshape((3, 3, 3))[
-                : self.nSpatialDimensions, : self.nSpatialDimensions, : self.nSpatialDimensions
+            H_inv_nF_ijk = self._H_inv_nF_ijk[i][
+                : self.nSpatialDimensions,
+                : self.nSpatialDimensions,
+                : self.nSpatialDimensions
             ]
 
             #print('H_inv_nF_ijk:\n',H_inv_nF_ijk)
 
-            Yn_H_inv_Fn_ijkl = self._dStressdStrain[i].T[12:21, 12:21].reshape((3, 3, 3, 3))[
+            Yn_H_inv_Fn_ijkl = self._Yn_H_inv_Fn_ijkl[i][
                 : self.nSpatialDimensions,
                 : self.nSpatialDimensions,
                 : self.nSpatialDimensions,
                 : self.nSpatialDimensions,
             ]
             detJ = self.sqrt_detG[i]
+            
+            #print("ELEMENT H_inv_ij:\n",H_inv_ij)
 
             K_jumpu_jumpv = assign_K_jumpu_jumpv(self.N_matrix[i], H_inv_ij)
             K += K_jumpu_jumpv.flatten() * detJ * self._t * self._weight[i]  # 2/h
 
             # Additional energy due to surface stiffness terms with Z_ijkl
             # get stiffness matrix for element j in point i
-            K_grad_s_u_grad_s_v = assign_K_grad_s_u_grad_s_v(self.B_matrix[i], Z_ijkl)
+            K_grad_s_u_grad_s_v = 0. *assign_K_grad_s_u_grad_s_v(self.B_matrix[i], Z_ijkl)
             K -= K_grad_s_u_grad_s_v.flatten() * detJ * self._t * self._weight[i]  # h/2.
 
             # Additional energy due to surface stiffness terms with Yn_H_inv_Fn_ijkl
             # get stiffness matrix for element j in point i
-            K_grad_s_u_grad_s_v = assign_K_grad_s_u_grad_s_v(self.B_matrix[i], Yn_H_inv_Fn_ijkl)
+            K_grad_s_u_grad_s_v = 0. *assign_K_grad_s_u_grad_s_v(self.B_matrix[i], Yn_H_inv_Fn_ijkl)
             K += K_grad_s_u_grad_s_v.flatten() * detJ * self._t * self._weight[i]  # h/2
             
             # Additional energy due to coupling between surface stiffness and jump terms with H_inv_nF_ijk
             # get stiffness matrix for element j in point i
-            K_jump_u_grad_s_v = assign_K_jump_u_grad_s_v(self.N_matrix[i], self.B_matrix[i], H_inv_nF_ijk)
+            K_jump_u_grad_s_v = 0. *assign_K_jump_u_grad_s_v(self.N_matrix[i], self.B_matrix[i], H_inv_nF_ijk)
             K -= K_jump_u_grad_s_v.flatten() * detJ * self._t * self._weight[i]
 
             # Additional energy due to coupling between jump and surface stiffness terms with H_inv_nF_ijk
             # get stiffness matrix for element j in point i
-            K_grad_s_u_jump_v = assign_K_grad_s_u_jump_v(self.N_matrix[i], self.B_matrix[i], H_inv_nF_ijk)
+            K_grad_s_u_jump_v = 0. *assign_K_grad_s_u_jump_v(self.N_matrix[i], self.B_matrix[i], H_inv_nF_ijk)
             K -= K_grad_s_u_jump_v.flatten() * detJ * self._t * self._weight[i]
 
             # Calculate residual vector P
@@ -672,7 +683,7 @@ class InterfaceElement(BaseElement):
             P -= P_jumpv.flatten() * detJ * self._t * self._weight[i]  # 2/h
 
             # calculate P (surface elasticity contribution)
-            P_grad_s_v = assign_P_grad_s_v(
+            P_grad_s_v = 0. *assign_P_grad_s_v(
                 self.B_matrix[i], self._surface_stress_at_Gauss
             )  # .reshape((self._nNodes,-1))[order]
             P -= P_grad_s_v.flatten() * detJ * self._t * self._weight[i]  # h/2.
@@ -695,13 +706,16 @@ class InterfaceElement(BaseElement):
 
             #self._J_jumpv += J_jumpv_temp*detJ*self._t*self._weight[i]
             #self._J_grad_s_v += J_grad_s_v_temp*detJ*self._t*self._weight[i]
+            print("GP:", i)
+            print("Element jump:", self._dU_GPs[i])
+            print("Element force:", self._force_at_Gauss)
 
         #J_jumpv_matrix = self._J_jumpv.reshape((self.nDof,self.nDof))
-        #J_grad_s_v_matrix = self._J_grad_s_v.reshape((self.nDof,self.nDof))
+        #J_grad_s_v_matrix = 0.*self._J_grad_s_v.reshape((self.nDof,self.nDof))
         #K_matrix = K.reshape((self.nDof,self.nDof)).copy()
         #K += (self._J_jumpv+self._J_grad_s_v).flatten() #Check with "correct" gradient
 
-        np.save("K_implicit_gradient.npy", K.reshape((self.nDof,self.nDof)))
+        #np.save("K_implicit_gradient.npy", K.reshape((self.nDof,self.nDof)))
 
     def calculate_forward_gradient_X_right(self, N_matrix, B_matrix, time, dTime, dU, i, P_jumpv_X, P_grad_s_v_X):
 
@@ -738,7 +752,10 @@ class InterfaceElement(BaseElement):
             self.material.computeStress(
                 force_at_Gauss_right,
                 surface_stress_at_Gauss_right,
-                self._dStressdStrain[i],
+                self._H_inv_ij[i],
+                self._Z_ijkl[i],
+                self._H_inv_nF_ijk[i],
+                self._Yn_H_inv_Fn_ijkl[i],
                 dU_GPs_right,
                 dSurface_strain_GPs_right,
                 self.n[i],
@@ -789,7 +806,10 @@ class InterfaceElement(BaseElement):
             self.material.computeStress(
                 force_at_Gauss_right,
                 surface_stress_at_Gauss_right,
-                dStressdStrain[i],
+                self._H_inv_ij[i],
+                self._Z_ijkl[i],
+                self._H_inv_nF_ijk[i],
+                self._Yn_H_inv_Fn_ijkl[i],
                 dU_GPs_right[i],
                 dSurface_strain_GPs_right[i],
                 self.n[i],

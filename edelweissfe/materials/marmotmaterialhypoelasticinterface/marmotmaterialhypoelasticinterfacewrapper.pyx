@@ -47,7 +47,10 @@ cdef class MarmotInterfaceMaterialWrapper:
     def computeStress(self,
                       double[::1]  force,
                       double[:,::1] surface_stress, # assume RowMajor order = C order, i.e. the last index is the fastest changing index
-                      double[:,::1] dStress_dStrain, # assume RowMajor order = C order, i.e. the last index is the fastest changing index
+                      double[:,::1] H_inv_ij, # assume RowMajor order = C order, i.e. the last index is the fastest changing index
+                      double[:,:,:,::1] Z_ijkl,
+                      double[:,:,::1] H_inv_nF_ijk,
+                      double[:,:,:,::1] Yn_H_inv_Fn_ijkl,                      
                       double[::1] dU,
                       double[::1] dSurface_strain,
                       double[::1] normal,
@@ -60,7 +63,10 @@ cdef class MarmotInterfaceMaterialWrapper:
         self._theMarmotInterfaceMaterialInstance.computeStress(
             &force[0],
             &surface_stress[0,0],
-            &dStress_dStrain[0,0],
+            &H_inv_ij[0,0],
+            &Z_ijkl[0,0,0,0],
+            &H_inv_nF_ijk[0,0,0],
+            &Yn_H_inv_Fn_ijkl[0,0,0,0],
             &dU[0],
             &dSurface_strain[0],
             &normal[0],
@@ -103,11 +109,24 @@ def test_MarmotInterfaceMaterialWrapper():
 
     force = np.array([100., 200., 300.])
     surface_stress = np.ones((3,3))
-    dStress_dStrain = np.ones((21,21)) * 2
+    H_inv_ij = np.ones((3,3))
+    Z_ijkl = np.ones((3,3,3,3))
+    H_inv_nF_ijk = np.ones((3,3,3))
+    Yn_H_inv_Fn_ijkl = np.ones((3,3,3,3))
     dU = np.ones(6) * 3
     dSurface_strain = np.ones(18) * 4
     normal = np.ones(3) * 5
     timeOld = 0.0
     dT = 0.1
 
-    marmotMaterialInterfaceWrapper.computeStress(force, surface_stress, dStress_dStrain, dU, dSurface_strain, normal, timeOld, dT)
+    marmotMaterialInterfaceWrapper.computeStress(force, 
+                                                 surface_stress, 
+                                                 H_inv_ij, 
+                                                 Z_ijkl, 
+                                                 H_inv_nF_ijk, 
+                                                 Yn_H_inv_Fn_ijkl,
+                                                 dU, 
+                                                 dSurface_strain,
+                                                 normal,
+                                                 timeOld,
+                                                 dT)
