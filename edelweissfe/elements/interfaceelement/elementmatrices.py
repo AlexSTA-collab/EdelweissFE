@@ -198,10 +198,12 @@ def compute_surface_grad(
             "iqja, jkq -> aikq", grad_phi_x_y_at_GPs_stacked[:,:,:,:,0], T
         )
     elif dim == 3:
+#        surface_grad_phi_x_y_at_GPs_stacked = np.einsum(
+#            "iqja, jkq -> aikq", grad_phi_x_y_at_GPs_stacked[:,:,:,:,0], T
+#        )
         surface_grad_phi_x_y_at_GPs_stacked = np.einsum(
-            "iqja, jkq -> aikq", grad_phi_x_y_at_GPs_stacked[:,:,:,:,0], T
-        )
-        
+            "imq, mqja, jkq -> aikq", T, grad_phi_x_y_at_GPs_stacked[:,:,:,:,0], T
+        )        
     #print('norm of difference surface_grad to global grad:\n',\
     #      np.linalg.norm(surface_grad_phi_x_y_at_GPs_stacked\
     #      -(grad_phi_x_y_at_GPs_stacked[:,:,:,:,0].transpose(3,0,2,1))))
@@ -385,19 +387,29 @@ def assign_K_grad_s_u_grad_s_v(B_matrix, Z_ijkl):
     K_grad_s_u_grad_s_v = 1./4. * K_grad_s_u_grad_s_v
     return K_grad_s_u_grad_s_v
 
-def assign_K_jump_u_grad_s_v(N_matrix, B_matrix, H_inv_nF_ijk):
-    K_jump_u_grad_s_v = np.einsum('im,mn,nj->ij', N_matrix.T, H_inv_nF_ijk.reshape(3,9), B_matrix)
-    K_jump_u_grad_s_v = np.hstack(( -K_jump_u_grad_s_v, K_jump_u_grad_s_v))
-    K_jump_u_grad_s_v = np.vstack(( -K_jump_u_grad_s_v, K_jump_u_grad_s_v))
-    K_jump_u_grad_s_v = 1./2. *  K_jump_u_grad_s_v
-    return K_jump_u_grad_s_v
-
 def assign_K_grad_s_u_jump_v(N_matrix, B_matrix, H_inv_nF_ijk):
-    K_grad_s_u_jump_v = np.einsum('im,mn,nj->ij', B_matrix.T, H_inv_nF_ijk.reshape(3,9).T, N_matrix)
-    K_grad_s_u_jump_v = np.hstack(( -K_grad_s_u_jump_v, -K_grad_s_u_jump_v))
-    K_grad_s_u_jump_v = np.vstack(( K_grad_s_u_jump_v, K_grad_s_u_jump_v))
+    #K_grad_s_u_jump_v = np.einsum('im,mn,nj->ij', B_matrix.T, H_inv_nF_ijk.reshape(9,3), N_matrix)
+    #K_grad_s_u_jump_v = np.einsum('kb,ijk,ija->ab', N_matrix, H_inv_nF_ijk.transpose(1,2,0), B_matrix.reshape(3,3,-1))
+    
+    K_grad_s_u_jump_v = np.einsum('im,mn,nj->ij', N_matrix.T, H_inv_nF_ijk.reshape(3,9), B_matrix)
+    K_grad_s_u_jump_v = np.hstack(( -K_grad_s_u_jump_v, K_grad_s_u_jump_v))
+    K_grad_s_u_jump_v = np.vstack(( -K_grad_s_u_jump_v, K_grad_s_u_jump_v))
     K_grad_s_u_jump_v = 1./2. *  K_grad_s_u_jump_v
     return K_grad_s_u_jump_v
+
+def assign_K_jump_u_grad_s_v(N_matrix, B_matrix, H_inv_nF_ijk):
+    K_jump_u_grad_s_v = np.einsum('im,mn,nj->ij', B_matrix.T, H_inv_nF_ijk.reshape(3,9).T, N_matrix)
+    #K_jump_u_grad_s_v = np.einsum('im,mn,nj->ij', N_matrix.T, H_inv_nF_ijk.reshape(3,9), B_matrix)
+
+    #print('H_inv_nF_ijk:\n',H_inv_nF_ijk)
+    #print('H_inv_nF_ijk reshape:\n',H_inv_nF_ijk.reshape(3,9))
+    #print('N_matrix\n:', N_matrix)
+    #K_jump_u_grad_s_v = np.einsum('ia,ijk,jkb->ba', N_matrix , 
+    #                              H_inv_nF_ijk, B_matrix.reshape(3,3,-1))
+    K_jump_u_grad_s_v = np.hstack((   -K_jump_u_grad_s_v,  K_jump_u_grad_s_v))
+    K_jump_u_grad_s_v = np.vstack((   -K_jump_u_grad_s_v,  K_jump_u_grad_s_v))
+    K_jump_u_grad_s_v = 1./2. *  K_jump_u_grad_s_v
+    return K_jump_u_grad_s_v
 
 def assign_P_jumpv(N_matrix, force):
     P_v = np.einsum('im,mj->ij', N_matrix.T, force.reshape(3,1))
@@ -406,6 +418,7 @@ def assign_P_jumpv(N_matrix, force):
 
 def assign_P_grad_s_v(B_matrix, surface_stress):
     P_grad_s_v = np.einsum('im,mj->ij', B_matrix.T, surface_stress.reshape(9,1))
+    #P_grad_s_v = np.einsum('ij,ija->a', surface_stress,  B_matrix.reshape(3,3,-1))
     P_grad_s_v = np.vstack((P_grad_s_v, P_grad_s_v))
     P_grad_s_v = 1./2.* P_grad_s_v
     return P_grad_s_v

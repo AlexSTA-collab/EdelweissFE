@@ -615,20 +615,24 @@ class InterfaceElement(BaseElement):
                 )
             # if self._elNumber==1001 and i==0:
             #    print(self._stateVarsTemp[i][36:])
-
-            Z_ijkl = self._dStressdStrain[i][:9, :9].reshape((3, 3, 3, 3))[
+            
+            Z_ijkl = self._dStressdStrain[i].T[:9, :9].reshape((3, 3, 3, 3))[
                 : self.nSpatialDimensions,
                 : self.nSpatialDimensions,
                 : self.nSpatialDimensions,
                 : self.nSpatialDimensions,
             ]  # Pick only the appropriate spatial dimensions
-            H_inv_ij = self._dStressdStrain[i][9:12, 9:12].reshape((3, 3))[
+            H_inv_ij = self._dStressdStrain[i].T[9:12, 9:12].reshape((3, 3))[
                 : self.nSpatialDimensions, : self.nSpatialDimensions
             ]
-            H_inv_nF_ijk = self._dStressdStrain[i][:9, 9:12].reshape((3, 3, 3))[
+           
+            H_inv_nF_ijk = self._dStressdStrain[i].T[:9, 9:12].reshape((3, 3, 3))[
                 : self.nSpatialDimensions, : self.nSpatialDimensions, : self.nSpatialDimensions
             ]
-            Yn_H_inv_Fn_ijkl = self._dStressdStrain[i][12:21, 12:21].reshape((3, 3, 3, 3))[
+
+            #print('H_inv_nF_ijk:\n',H_inv_nF_ijk)
+
+            Yn_H_inv_Fn_ijkl = self._dStressdStrain[i].T[12:21, 12:21].reshape((3, 3, 3, 3))[
                 : self.nSpatialDimensions,
                 : self.nSpatialDimensions,
                 : self.nSpatialDimensions,
@@ -648,6 +652,7 @@ class InterfaceElement(BaseElement):
             # get stiffness matrix for element j in point i
             K_grad_s_u_grad_s_v = assign_K_grad_s_u_grad_s_v(self.B_matrix[i], Yn_H_inv_Fn_ijkl)
             K += K_grad_s_u_grad_s_v.flatten() * detJ * self._t * self._weight[i]  # h/2
+            
             # Additional energy due to coupling between surface stiffness and jump terms with H_inv_nF_ijk
             # get stiffness matrix for element j in point i
             K_jump_u_grad_s_v = assign_K_jump_u_grad_s_v(self.N_matrix[i], self.B_matrix[i], H_inv_nF_ijk)
@@ -670,25 +675,33 @@ class InterfaceElement(BaseElement):
             P_grad_s_v = assign_P_grad_s_v(
                 self.B_matrix[i], self._surface_stress_at_Gauss
             )  # .reshape((self._nNodes,-1))[order]
-            P += P_grad_s_v.flatten() * detJ * self._t * self._weight[i]  # h/2.
+            P -= P_grad_s_v.flatten() * detJ * self._t * self._weight[i]  # h/2.
+
+            #print("Res:", P_grad_s_v.flatten() * detJ * self._t * self._weight[i])
+            #print("ResK:", K_jump_u_grad_s_v@ dU.flatten())
+            #print("Force",self._force_at_Gauss)
+            #print("Surface stress",self._surface_stress_at_Gauss)
 
             self._stateVarsTemp[i][0 : self.nSpatialDimensions] = self._force_at_Gauss
             self._stateVarsTemp[i][3 : int(3 + self.nSpatialDimensions**2)] = self._surface_stress_at_Gauss.reshape(-1)
             self._stateVarsTemp[i][12 : int(12 + self._dU_GPs[i].shape[0])] += self._dU_GPs[i]
             self._stateVarsTemp[i][18 : int(18 + self._dSurface_strain_GPs[i].shape[0])] += self._dSurface_strain_GPs[i]
-            # J_jumpv_temp, J_grad_s_v_temp = self.calculate_forward_gradient_X_right( self.N_matrix[i], self.B_matrix[i],\
+            
+            #J_jumpv_temp, J_grad_s_v_temp = self.calculate_forward_gradient_X_right( self.N_matrix[i], self.B_matrix[i],\
             #                                                                         time, dTime, dU, i, P_jumpv[:,0], P_grad_s_v[:,0])
 
             # J_jumpv_temp, J_grad_s_v_temp = self.calculate_central_gradient_X_right( self.N_matrix[i], self.B_matrix[i],\
             #                                                                         time, dTime, dU, i,P_jumpv[:,0], P_grad_s_v[:,0])
 
-            # self._J_jumpv += 2/h*J_jumpv_temp*detJ*self._t*self._weight[i]
-            # self._J_grad_s_v -= h/2.*J_grad_s_v_temp*detJ*self._t*self._weight[i]
+            #self._J_jumpv += J_jumpv_temp*detJ*self._t*self._weight[i]
+            #self._J_grad_s_v += J_grad_s_v_temp*detJ*self._t*self._weight[i]
 
-        # J_jumpv_matrix = self._J_jumpv.reshape((self.nDof,self.nDof))
-        # J_grad_s_v_matrix = self._J_grad_s_v.reshape((self.nDof,self.nDof))
-        # K_matrix = K.reshape((self.nDof,self.nDof)).copy()
-        # K = (self._J_jumpv+self._J_grad_s_v) #Check with "correct" gradient
+        #J_jumpv_matrix = self._J_jumpv.reshape((self.nDof,self.nDof))
+        #J_grad_s_v_matrix = self._J_grad_s_v.reshape((self.nDof,self.nDof))
+        #K_matrix = K.reshape((self.nDof,self.nDof)).copy()
+        #K += (self._J_jumpv+self._J_grad_s_v).flatten() #Check with "correct" gradient
+
+        np.save("K_implicit_gradient.npy", K.reshape((self.nDof,self.nDof)))
 
     def calculate_forward_gradient_X_right(self, N_matrix, B_matrix, time, dTime, dU, i, P_jumpv_X, P_grad_s_v_X):
 
@@ -708,14 +721,14 @@ class InterfaceElement(BaseElement):
             dU_right[p] += epsilon
             dU_right = dU_right.reshape((-1, 3))
 
-            dU_GPs_top_right = np.einsum("cm,m->c", N_matrix, dU_right[: self.number_of_element_nodes].flatten())
-            dU_GPs_bottom_right = np.einsum("cm,m->c", N_matrix, dU_right[self.number_of_element_nodes :].flatten())
+            dU_GPs_bottom_right = np.einsum("cm,m->c", N_matrix, dU_right[: self.number_of_element_nodes].flatten())
+            dU_GPs_top_right = np.einsum("cm,m->c", N_matrix, dU_right[self.number_of_element_nodes :].flatten())
             dU_GPs_right = np.ascontiguousarray(np.hstack((dU_GPs_top_right, dU_GPs_bottom_right)))
 
-            dSurface_strain_GPs_top_right = np.einsum(
+            dSurface_strain_GPs_bottom_right = np.einsum(
                 "cm,m->c", B_matrix, dU_right[: self.number_of_element_nodes].flatten()
             )
-            dSurface_strain_GPs_bottom_right = np.einsum(
+            dSurface_strain_GPs_top_right = np.einsum(
                 "cm,m->c", B_matrix, dU_right[self.number_of_element_nodes :].flatten()
             )
             dSurface_strain_GPs_right = np.ascontiguousarray(
