@@ -398,8 +398,8 @@ def assign_K_grad_s_u_jump_v(N_matrix, B_matrix, H_inv_nF_ijk):
     return K_grad_s_u_jump_v
 
 def assign_K_jump_u_grad_s_v(N_matrix, B_matrix, H_inv_nF_ijk):
-    K_jump_u_grad_s_v = np.einsum('im,mn,nj->ij', B_matrix.T, H_inv_nF_ijk.reshape(3,9).T, N_matrix)
-    #K_jump_u_grad_s_v = np.einsum('im,mn,nj->ij', N_matrix.T, H_inv_nF_ijk.reshape(3,9), B_matrix)
+    #K_jump_u_grad_s_v = np.einsum('im,mn,nj->ij', B_matrix.T, H_inv_nF_ijk.reshape(3,9).T, N_matrix)
+    K_jump_u_grad_s_v = np.einsum('im,mn,nj->ij', N_matrix.T, H_inv_nF_ijk.reshape(3,9), B_matrix)
 
     #print('H_inv_nF_ijk:\n',H_inv_nF_ijk)
     #print('H_inv_nF_ijk reshape:\n',H_inv_nF_ijk.reshape(3,9))

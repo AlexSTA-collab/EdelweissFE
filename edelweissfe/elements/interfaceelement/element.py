@@ -627,7 +627,9 @@ class InterfaceElement(BaseElement):
                 : self.nSpatialDimensions,
                 : self.nSpatialDimensions,
                 : self.nSpatialDimensions,
-            ]  # Pick only the appropriate spatial dimensions
+            ]  
+            
+            # Pick only the appropriate spatial dimensions
             H_inv_ij = self._H_inv_ij[i][
                 : self.nSpatialDimensions, 
                 : self.nSpatialDimensions,
@@ -649,7 +651,11 @@ class InterfaceElement(BaseElement):
             ]
             detJ = self.sqrt_detG[i]
             
-            #print("ELEMENT H_inv_ij:\n",H_inv_ij)
+            if i == 0:
+                np.save("H_inv_ij_B.npy", H_inv_ij)
+                np.save("Z_ijkl_B.npy", Z_ijkl) 
+                np.save("H_inv_nF_ijk_B.npy", H_inv_nF_ijk) 
+                np.save("Yn_H_inv_Fn_ijkl_B.npy", Yn_H_inv_Fn_ijkl) 
 
             K_jumpu_jumpv = assign_K_jumpu_jumpv(self.N_matrix[i], H_inv_ij)
             K += K_jumpu_jumpv.flatten() * detJ * self._t * self._weight[i]  # 2/h
@@ -706,16 +712,16 @@ class InterfaceElement(BaseElement):
 
             #self._J_jumpv += J_jumpv_temp*detJ*self._t*self._weight[i]
             #self._J_grad_s_v += J_grad_s_v_temp*detJ*self._t*self._weight[i]
-            print("GP:", i)
-            print("Element jump:", self._dU_GPs[i])
-            print("Element force:", self._force_at_Gauss)
+            #print("GP:", i)
+            #print("Element jump:", self._dU_GPs[i])
+            #print("Element force:", self._force_at_Gauss)
 
         #J_jumpv_matrix = self._J_jumpv.reshape((self.nDof,self.nDof))
         #J_grad_s_v_matrix = 0.*self._J_grad_s_v.reshape((self.nDof,self.nDof))
         #K_matrix = K.reshape((self.nDof,self.nDof)).copy()
         #K += (self._J_jumpv+self._J_grad_s_v).flatten() #Check with "correct" gradient
 
-        #np.save("K_implicit_gradient.npy", K.reshape((self.nDof,self.nDof)))
+        np.save("K_B.npy", K.reshape((self.nDof,self.nDof)))
 
     def calculate_forward_gradient_X_right(self, N_matrix, B_matrix, time, dTime, dU, i, P_jumpv_X, P_grad_s_v_X):
 
