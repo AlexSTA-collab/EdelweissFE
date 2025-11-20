@@ -650,14 +650,16 @@ class InterfaceElement(BaseElement):
                 : self.nSpatialDimensions,
             ]
             detJ = self.sqrt_detG[i]
-            
+
+            K_jumpu_jumpv = assign_K_jumpu_jumpv(self.N_matrix[i], H_inv_ij)
             if i == 0:
                 np.save("H_inv_ij_B.npy", H_inv_ij)
                 np.save("Z_ijkl_B.npy", Z_ijkl) 
                 np.save("H_inv_nF_ijk_B.npy", H_inv_nF_ijk) 
                 np.save("Yn_H_inv_Fn_ijkl_B.npy", Yn_H_inv_Fn_ijkl) 
+                np.save("N_B.npy", self.N_matrix[i])
+                np.save("K_jumpu_jumpv_B.npy", K_jumpu_jumpv)
 
-            K_jumpu_jumpv = assign_K_jumpu_jumpv(self.N_matrix[i], H_inv_ij)
             K += K_jumpu_jumpv.flatten() * detJ * self._t * self._weight[i]  # 2/h
 
             # Additional energy due to surface stiffness terms with Z_ijkl
