@@ -343,6 +343,8 @@ class InterfaceElement(BaseElement):
         #store force history for debug perposes
         self.force_history = []
         self.K_history = []
+        self.dU_history = []
+        self.gradU_history = []
 
     def setNodes(self, nodes: list[Node]):
         """Assign the nodes to the element.
@@ -656,6 +658,7 @@ class InterfaceElement(BaseElement):
             detJ = self.sqrt_detG[i]
 
             K_jumpu_jumpv = assign_K_jumpu_jumpv(self.N_matrix[i], H_inv_ij)
+            K += K_jumpu_jumpv.flatten() * detJ * self._t * self._weight[i]  # 2/h
             if i == 0:
                 np.save("H_inv_ij_B.npy", H_inv_ij)
                 np.save("Z_ijkl_B.npy", Z_ijkl)
@@ -667,8 +670,10 @@ class InterfaceElement(BaseElement):
                 np.save("K_jumpu_jumpv_B.npy", K_jumpu_jumpv)
                 self.force_history.append(self._force_at_Gauss.copy())
                 np.save("force_history_B.npy", self.force_history)
-
-            K += K_jumpu_jumpv.flatten() * detJ * self._t * self._weight[i]  # 2/h
+                self.dU_history.append(self._dU_GPs[i].copy())
+                np.save("dU_history_B.npy", self.dU_history)
+                self.gradU_history.append(self._dSurface_strain_GPs[i].copy())
+                np.save("gradU_history_B.npy", self.gradU_history)
 
             # Additional energy due to surface stiffness terms with Z_ijkl
             # get stiffness matrix for element j in point i
