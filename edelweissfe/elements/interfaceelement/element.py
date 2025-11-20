@@ -340,6 +340,10 @@ class InterfaceElement(BaseElement):
         self.inverse_order = np.empty_like(self.reorder_nodes_list)
         self.inverse_order[self.reorder_nodes_list] = np.arange(len(self.reorder_nodes_list))
 
+        #store force history for debug perposes
+        self.force_history = []
+        self.K_history = []
+
     def setNodes(self, nodes: list[Node]):
         """Assign the nodes to the element.
 
@@ -654,11 +658,15 @@ class InterfaceElement(BaseElement):
             K_jumpu_jumpv = assign_K_jumpu_jumpv(self.N_matrix[i], H_inv_ij)
             if i == 0:
                 np.save("H_inv_ij_B.npy", H_inv_ij)
-                np.save("Z_ijkl_B.npy", Z_ijkl) 
-                np.save("H_inv_nF_ijk_B.npy", H_inv_nF_ijk) 
-                np.save("Yn_H_inv_Fn_ijkl_B.npy", Yn_H_inv_Fn_ijkl) 
+                np.save("Z_ijkl_B.npy", Z_ijkl)
+                np.save("H_inv_nF_ijk_B.npy", H_inv_nF_ijk)
+                np.save("Yn_H_inv_nF_ijkl_B.npy", Yn_H_inv_Fn_ijkl)
                 np.save("N_B.npy", self.N_matrix[i])
+                self.K_history.append(K.copy())
+                np.save("K_history_B.npy", self.K_history)
                 np.save("K_jumpu_jumpv_B.npy", K_jumpu_jumpv)
+                self.force_history.append(self._force_at_Gauss.copy())
+                np.save("force_history_B.npy", self.force_history)
 
             K += K_jumpu_jumpv.flatten() * detJ * self._t * self._weight[i]  # 2/h
 
@@ -722,8 +730,6 @@ class InterfaceElement(BaseElement):
         #J_grad_s_v_matrix = 0.*self._J_grad_s_v.reshape((self.nDof,self.nDof))
         #K_matrix = K.reshape((self.nDof,self.nDof)).copy()
         #K += (self._J_jumpv+self._J_grad_s_v).flatten() #Check with "correct" gradient
-
-        np.save("K_B.npy", K.reshape((self.nDof,self.nDof)))
 
     def calculate_forward_gradient_X_right(self, N_matrix, B_matrix, time, dTime, dU, i, P_jumpv_X, P_grad_s_v_X):
 
