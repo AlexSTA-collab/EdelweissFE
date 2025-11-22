@@ -345,6 +345,7 @@ class InterfaceElement(BaseElement):
         self.K_history = []
         self.dU_history = []
         self.gradU_history = []
+        self.normal_field = []
 
     def setNodes(self, nodes: list[Node]):
         """Assign the nodes to the element.
@@ -602,6 +603,9 @@ class InterfaceElement(BaseElement):
 
             self.material.assignStateVars(self._stateVarsTemp[i][36:])
             #print(self.n[i])
+            self.normal_field.append(self.n[i].copy())
+            np.save("normal_field_B.npy", self.normal_field)
+
             #if not np.isclose(np.einsum('i,i->', self.n[i], [0, 0, 1]), 1.0):
             #    raise Exception(
             #    f"The normal vector is not properly defined; check the element nodes ordering.\nNormal: {self.n[i]}"
@@ -646,7 +650,7 @@ class InterfaceElement(BaseElement):
                 : self.nSpatialDimensions,
                 : self.nSpatialDimensions
             ]
-
+            #print('GP Element:\n',i)
             #print('H_inv_nF_ijk:\n',H_inv_nF_ijk)
 
             Yn_H_inv_Fn_ijkl = self._Yn_H_inv_Fn_ijkl[i][
@@ -657,7 +661,7 @@ class InterfaceElement(BaseElement):
             ]
             detJ = self.sqrt_detG[i]
 
-            K_jumpu_jumpv = assign_K_jumpu_jumpv(self.N_matrix[i], H_inv_ij)
+            K_jumpu_jumpv = 0. * assign_K_jumpu_jumpv(self.N_matrix[i], H_inv_ij)
             K += K_jumpu_jumpv.flatten() * detJ * self._t * self._weight[i]  # 2/h
             if i == 0:
                 np.save("H_inv_ij_B.npy", H_inv_ij)
@@ -682,19 +686,26 @@ class InterfaceElement(BaseElement):
 
             # Additional energy due to surface stiffness terms with Yn_H_inv_Fn_ijkl
             # get stiffness matrix for element j in point i
-            K_grad_s_u_grad_s_v = 0. *assign_K_grad_s_u_grad_s_v(self.B_matrix[i], Yn_H_inv_Fn_ijkl)
+            K_grad_s_u_grad_s_v = 0.*assign_K_grad_s_u_grad_s_v(self.B_matrix[i], Yn_H_inv_Fn_ijkl)
             K += K_grad_s_u_grad_s_v.flatten() * detJ * self._t * self._weight[i]  # h/2
             
             # Additional energy due to coupling between surface stiffness and jump terms with H_inv_nF_ijk
             # get stiffness matrix for element j in point i
-            K_jump_u_grad_s_v = 0. *assign_K_jump_u_grad_s_v(self.N_matrix[i], self.B_matrix[i], H_inv_nF_ijk)
+            K_jump_u_grad_s_v = assign_K_jump_u_grad_s_v(self.N_matrix[i], self.B_matrix[i], H_inv_nF_ijk)
             K -= K_jump_u_grad_s_v.flatten() * detJ * self._t * self._weight[i]
 
             # Additional energy due to coupling between jump and surface stiffness terms with H_inv_nF_ijk
             # get stiffness matrix for element j in point i
-            K_grad_s_u_jump_v = 0. *assign_K_grad_s_u_jump_v(self.N_matrix[i], self.B_matrix[i], H_inv_nF_ijk)
+            K_grad_s_u_jump_v = assign_K_grad_s_u_jump_v(self.N_matrix[i], self.B_matrix[i], H_inv_nF_ijk)
             K -= K_grad_s_u_jump_v.flatten() * detJ * self._t * self._weight[i]
+            
+            #Consistency test
+            #print("K_jump_u_grad_s_v:\n", K_jump_u_grad_s_v)
+            #K_concistency = K_jump_u_grad_s_v + K_grad_s_u_jump_v
+            #np.save("K_concistency_B_implicit.npy", K_concistency)
 
+            #print("norm concistency", np.linalg.norm(K_concistency-K_concistency.T))
+            #np.save("K_concistency_B.npy", K_concistency)
             # Calculate residual vector P
             # Because we do not separate between coupled forces from jumps and surface elasticity only two terms are present instead of five
             # If we want more control we need to assign the extra forces and stress parts in the state variables vector increasing memory requirements
@@ -704,7 +715,7 @@ class InterfaceElement(BaseElement):
             P -= P_jumpv.flatten() * detJ * self._t * self._weight[i]  # 2/h
 
             # calculate P (surface elasticity contribution)
-            P_grad_s_v = 0. *assign_P_grad_s_v(
+            P_grad_s_v = assign_P_grad_s_v(
                 self.B_matrix[i], self._surface_stress_at_Gauss
             )  # .reshape((self._nNodes,-1))[order]
             P -= P_grad_s_v.flatten() * detJ * self._t * self._weight[i]  # h/2.
@@ -727,6 +738,7 @@ class InterfaceElement(BaseElement):
 
             #self._J_jumpv += J_jumpv_temp*detJ*self._t*self._weight[i]
             #self._J_grad_s_v += J_grad_s_v_temp*detJ*self._t*self._weight[i]
+            
             #print("GP:", i)
             #print("Element jump:", self._dU_GPs[i])
             #print("Element force:", self._force_at_Gauss)
@@ -735,6 +747,7 @@ class InterfaceElement(BaseElement):
         #J_grad_s_v_matrix = 0.*self._J_grad_s_v.reshape((self.nDof,self.nDof))
         #K_matrix = K.reshape((self.nDof,self.nDof)).copy()
         #K += (self._J_jumpv+self._J_grad_s_v).flatten() #Check with "correct" gradient
+        #np.save("K_concistency_B_implicit.npy", K)
 
     def calculate_forward_gradient_X_right(self, N_matrix, B_matrix, time, dTime, dU, i, P_jumpv_X, P_grad_s_v_X):
 

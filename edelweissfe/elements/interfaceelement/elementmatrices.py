@@ -387,29 +387,58 @@ def assign_K_grad_s_u_grad_s_v(B_matrix, Z_ijkl):
     K_grad_s_u_grad_s_v = 1./4. * K_grad_s_u_grad_s_v
     return K_grad_s_u_grad_s_v
 
-def assign_K_grad_s_u_jump_v(N_matrix, B_matrix, H_inv_nF_ijk):
-    #K_grad_s_u_jump_v = np.einsum('im,mn,nj->ij', B_matrix.T, H_inv_nF_ijk.reshape(9,3), N_matrix)
-    #K_grad_s_u_jump_v = np.einsum('kb,ijk,ija->ab', N_matrix, H_inv_nF_ijk.transpose(1,2,0), B_matrix.reshape(3,3,-1))
-    
-    K_grad_s_u_jump_v = np.einsum('im,mn,nj->ij', N_matrix.T, H_inv_nF_ijk.reshape(3,9), B_matrix)
-    K_grad_s_u_jump_v = np.hstack(( -K_grad_s_u_jump_v, K_grad_s_u_jump_v))
-    K_grad_s_u_jump_v = np.vstack(( -K_grad_s_u_jump_v, K_grad_s_u_jump_v))
-    K_grad_s_u_jump_v = 1./2. *  K_grad_s_u_jump_v
-    return K_grad_s_u_jump_v
+#def assign_K_grad_s_u_jump_v(N_matrix, B_matrix, H_inv_nF_ijk):
+#    K_grad_s_u_jump_v = np.einsum('im,mn,nj->ij', N_matrix.T, H_inv_nF_ijk.reshape(3,9), B_matrix)
+#    K_grad_s_u_jump_v = np.hstack(( -K_grad_s_u_jump_v, K_grad_s_u_jump_v))
+#    K_grad_s_u_jump_v = np.vstack(( -K_grad_s_u_jump_v, K_grad_s_u_jump_v))
+#    K_grad_s_u_jump_v = 1./2. *  K_grad_s_u_jump_v
+#    return K_grad_s_u_jump_v
 
-def assign_K_jump_u_grad_s_v(N_matrix, B_matrix, H_inv_nF_ijk):
-    #K_jump_u_grad_s_v = np.einsum('im,mn,nj->ij', B_matrix.T, H_inv_nF_ijk.reshape(3,9).T, N_matrix)
-    K_jump_u_grad_s_v = np.einsum('im,mn,nj->ij', N_matrix.T, H_inv_nF_ijk.reshape(3,9), B_matrix)
+#def assign_K_jump_u_grad_s_v(N_matrix, B_matrix, H_inv_nF_ijk):
+#    K_jump_u_grad_s_v = np.einsum('im,mn,nj->ij', B_matrix.T, H_inv_nF_ijk.reshape(3,9).T, N_matrix)
+#    #K_jump_u_grad_s_v = np.einsum('im,mn,nj->ij', N_matrix.T, H_inv_nF_ijk.reshape(3,9), B_matrix)
+#
+#    K_jump_u_grad_s_v = np.hstack(( -K_jump_u_grad_s_v, K_jump_u_grad_s_v))
+#    K_jump_u_grad_s_v = np.vstack(( -K_jump_u_grad_s_v, K_jump_u_grad_s_v))
+#    K_jump_u_grad_s_v = 1./2. *  K_jump_u_grad_s_v
+#    return K_jump_u_grad_s_v
 
-    #print('H_inv_nF_ijk:\n',H_inv_nF_ijk)
-    #print('H_inv_nF_ijk reshape:\n',H_inv_nF_ijk.reshape(3,9))
-    #print('N_matrix\n:', N_matrix)
-    #K_jump_u_grad_s_v = np.einsum('ia,ijk,jkb->ba', N_matrix , 
-    #                              H_inv_nF_ijk, B_matrix.reshape(3,3,-1))
-    K_jump_u_grad_s_v = np.hstack((   -K_jump_u_grad_s_v,  K_jump_u_grad_s_v))
-    K_jump_u_grad_s_v = np.vstack((   -K_jump_u_grad_s_v,  K_jump_u_grad_s_v))
-    K_jump_u_grad_s_v = 1./2. *  K_jump_u_grad_s_v
-    return K_jump_u_grad_s_v
+def assign_K_grad_s_u_jump_v(N, B, H_inv_nF):
+    """
+    N : (3, nd)
+    B : (3,3,nd)
+    H_inv_nF : (3,3,3)
+    returns K_A (24×24 for nd=12)
+    """
+    t = H_inv_nF  # rename for clarity
+
+    # A[a,b] = N[i,a] * t[i,j,k] * B[i,j,b]
+    A = np.einsum('ia,ijk,jkb->ab', N, t, B.reshape(3,3,-1))
+
+    # Build 2x2 block matrix
+    K = 0.5 * np.block([
+        [ -A, -A ],
+        [  A,  A ]
+    ])
+    return K
+
+
+def assign_K_jump_u_grad_s_v(N, B, H_inv_nF):
+    """
+    The adjoint consistency term.
+    """
+    t = H_inv_nF
+
+    # AT[a,b] = N[i,a] * t[i,j,k] * B[i,j,b]
+    A = np.einsum('ia,ijk,jkb->ab', N, t, B.reshape(3,3,-1))
+    AT = A.T
+
+    K = 0.5 * np.block([
+        [ -AT, AT ],
+        [ -AT, AT ]
+    ])
+    return K
+
 
 def assign_P_jumpv(N_matrix, force):
     P_v = np.einsum('im,mj->ij', N_matrix.T, force.reshape(3,1))
