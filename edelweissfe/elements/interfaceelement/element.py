@@ -27,6 +27,7 @@
 #  the top level directory of EdelweissFE.
 #  ---------------------------------------------------------------------
 import copy
+from pathlib import Path
 
 import basix
 import numpy as np
@@ -51,6 +52,11 @@ from edelweissfe.elements.interfaceelement.elementmatrices import (
 )
 from edelweissfe.points.node import Node
 from edelweissfe.utils.caseinsensitivedict import CaseInsensitiveDict
+
+LOCAL_STIFFNESS_EXPORT_MODE = "implicit"  # "fd" for forward difference, "implicit" for the regular stiffness matrix
+LOCAL_STIFFNESS_EXPORT_DIR = Path("stiffness_exports")
+LOCAL_STIFFNESS_EXPORT_BASENAME = "interface_check"
+LOCAL_FD_DEBUG_LOG = True
 
 # The interface element is either a 1D or a 2D element
 
@@ -240,7 +246,7 @@ class InterfaceElement(BaseElement):
         return self._nNodes
 
     @property
-    def nodes(self) -> int:
+    def nodes(self) -> list[Node]:
         """The list of nodes this element holds"""
 
         return self._nodes
@@ -273,7 +279,7 @@ class InterfaceElement(BaseElement):
         return self._ensightType
 
     @property
-    def visualizationNodes(self) -> str:
+    def visualizationNodes(self) -> list[Node]:
         """The nodes for visualization."""
 
         return self._nodes
@@ -282,7 +288,7 @@ class InterfaceElement(BaseElement):
     def hasMaterial(self) -> str:
         """Flag to check if a material was assigned to this element."""
 
-        return self._hasMaterial
+        return self._hasMaterial  # type: ignore[return-value]
 
     @property
     def reorder_nodes_list(self):
@@ -338,15 +344,22 @@ class InterfaceElement(BaseElement):
         self._J_jumpv = np.zeros((self.nDof, self.nDof))
         self._J_grad_s_v = np.zeros((self.nDof, self.nDof))
         self.count = 0
+        self._stiffness_export_mode = str(LOCAL_STIFFNESS_EXPORT_MODE).lower()
+        self._stiffness_export_dir = Path(LOCAL_STIFFNESS_EXPORT_DIR).expanduser()
+        self._stiffness_export_basename = str(LOCAL_STIFFNESS_EXPORT_BASENAME)
+        self._fd_debug_log_enabled = bool(LOCAL_FD_DEBUG_LOG)
+        self._has_exported_stiffness = False
+        self._has_logged_fd_jump_column_debug = False
+        self._has_reset_fd_debug_log = False
         self.inverse_order = np.empty_like(self.reorder_nodes_list)
         self.inverse_order[self.reorder_nodes_list] = np.arange(len(self.reorder_nodes_list))
 
         # store force history for debug perposes
-        self.force_history = []
-        self.K_history = []
-        self.dU_history = []
-        self.gradU_history = []
-        self.normal_field = []
+        # self.force_history = []
+        # self.K_history = []
+        # self.dU_history = []
+        # self.gradU_history = []
+        # self.normal_field = []
 
     def setNodes(self, nodes: list[Node]):
         """Assign the nodes to the element.
@@ -443,10 +456,10 @@ class InterfaceElement(BaseElement):
         stateVarsSize = (3 + 9) + 2 * (3 + 9) + self.material.getNumberOfRequiredStateVars()
         self._matrixSize = 21
 
-        self._H_inv_ij = np.zeros([self._nInt, 3, 3])
+        self._Q_ij = np.zeros([self._nInt, 3, 3])
         self._Z_ijkl = np.zeros([self._nInt, 3, 3, 3, 3])
-        self._H_inv_nF_ijk = np.zeros([self._nInt, 3, 3, 3])
-        self._Yn_H_inv_Fn_ijkl = np.zeros([self._nInt, 3, 3, 3, 3])
+        self._H_ijk = np.zeros([self._nInt, 3, 3, 3])
+        self._Y_ijkl = np.zeros([self._nInt, 3, 3, 3, 3])
 
         self._hasMaterial = True
         self._stateVarsRef = np.zeros([self._nInt, stateVarsSize])
@@ -585,27 +598,34 @@ class InterfaceElement(BaseElement):
             np.hstack((dSurface_strain_GPs_top, dSurface_strain_GPs_bottom))
         )
 
-        self._J_jumpv = np.zeros((self._nDof, self._nDof))
-        self._J_grad_s_v = np.zeros((self._nDof, self._nDof))
+        K_before = K.copy()
+        fd_mode = self._stiffness_export_mode == "fd"
+        if fd_mode:
+            self._J_jumpv.fill(0.0)
+            self._J_grad_s_v.fill(0.0)
 
         for i in range(self._nInt):
             # get stress and strain
             self._force_at_Gauss = self._stateVarsTemp[i][0 : self.nSpatialDimensions]  # 3
-            self._force_at_Gauss_X = copy.deepcopy(self._stateVarsTemp[i][0 : self.nSpatialDimensions])
+            force_state_old = np.array(self._stateVarsTemp[i][0 : self.nSpatialDimensions], dtype=np.float64)
+            self._force_at_Gauss_X = force_state_old.copy()
 
             self._surface_stress_at_Gauss = self._stateVarsTemp[i][3 : int(3 + self.nSpatialDimensions**2)].reshape(
                 (self.nSpatialDimensions, self.nSpatialDimensions)
             )
-            self._surface_stress_at_Gauss_X = copy.deepcopy(
+            surface_stress_state_old = np.array(
                 self._stateVarsTemp[i][3 : int(3 + self.nSpatialDimensions**2)].reshape(
                     (self.nSpatialDimensions, self.nSpatialDimensions)
-                )
+                ),
+                dtype=np.float64,
             )
+            self._surface_stress_at_Gauss_X = surface_stress_state_old.copy()
 
             self.material.assignStateVars(self._stateVarsTemp[i][36:])
+            # stateVars_pre = np.array(self._stateVarsTemp[i][36:], dtype=np.float64)
             # print(self.n[i])
-            self.normal_field.append(self.n[i].copy())
-            np.save("normal_field_B.npy", self.normal_field)
+            # self.normal_field.append(self.n[i].copy())
+            # np.save("normal_field_B.npy", self.normal_field)
 
             # if not np.isclose(np.einsum('i,i->', self.n[i], [0, 0, 1]), 1.0):
             #    raise Exception(
@@ -616,94 +636,60 @@ class InterfaceElement(BaseElement):
                 raise Exception("Plain stress is not yet implemented in this element provider.")
                 # self.material.computePlaneStress(stress, self._dStressdStrain[i], self._dStrain[i], time, dTime)
             else:
+                detJ = self.sqrt_detG[i]
                 self.material.computeStress(
                     self._force_at_Gauss,
                     self._surface_stress_at_Gauss,
-                    self._H_inv_ij[i],
+                    self._Q_ij[i],
                     self._Z_ijkl[i],
-                    self._H_inv_nF_ijk[i],
-                    self._Yn_H_inv_Fn_ijkl[i],
+                    self._H_ijk[i],
+                    self._Y_ijkl[i],
                     self._dU_GPs[i],
                     self._dSurface_strain_GPs[i],
                     self.n[i],
                     time[-1],
                     dTime,
                 )
-            # if self._elNumber==1001 and i==0:
-            #    print(self._stateVarsTemp[i][36:])
 
-            Z_ijkl = self._Z_ijkl[i][
-                : self.nSpatialDimensions,
-                : self.nSpatialDimensions,
-                : self.nSpatialDimensions,
-                : self.nSpatialDimensions,
-            ]
+                if not fd_mode:
+                    Z_ijkl = self._Z_ijkl[i][
+                        : self.nSpatialDimensions,
+                        : self.nSpatialDimensions,
+                        : self.nSpatialDimensions,
+                        : self.nSpatialDimensions,
+                    ]
 
-            # Pick only the appropriate spatial dimensions
-            H_inv_ij = self._H_inv_ij[i][
-                : self.nSpatialDimensions,
-                : self.nSpatialDimensions,
-            ]
+                    Q_ij = self._Q_ij[i][
+                        : self.nSpatialDimensions,
+                        : self.nSpatialDimensions,
+                    ]
 
-            H_inv_nF_ijk = self._H_inv_nF_ijk[i][
-                : self.nSpatialDimensions, : self.nSpatialDimensions, : self.nSpatialDimensions
-            ]
-            # print('GP Element:\n',i)
-            # print('H_inv_nF_ijk:\n',H_inv_nF_ijk)
+                    H_ijk = self._H_ijk[i][
+                        : self.nSpatialDimensions, : self.nSpatialDimensions, : self.nSpatialDimensions
+                    ]
 
-            Yn_H_inv_Fn_ijkl = self._Yn_H_inv_Fn_ijkl[i][
-                : self.nSpatialDimensions,
-                : self.nSpatialDimensions,
-                : self.nSpatialDimensions,
-                : self.nSpatialDimensions,
-            ]
-            detJ = self.sqrt_detG[i]
+                    Y_ijkl = self._Y_ijkl[i][
+                        : self.nSpatialDimensions,
+                        : self.nSpatialDimensions,
+                        : self.nSpatialDimensions,
+                        : self.nSpatialDimensions,
+                    ]
 
-            K_jumpu_jumpv = assign_K_jumpu_jumpv(self.N_matrix[i], H_inv_ij)
-            K += K_jumpu_jumpv.flatten() * detJ * self._t * self._weight[i]  # 2/h
-            if i == 0:
-                np.save("H_inv_ij_B.npy", H_inv_ij)
-                np.save("Z_ijkl_B.npy", Z_ijkl)
-                np.save("H_inv_nF_ijk_B.npy", H_inv_nF_ijk)
-                np.save("Yn_H_inv_nF_ijkl_B.npy", Yn_H_inv_Fn_ijkl)
-                np.save("N_B.npy", self.N_matrix[i])
-                self.K_history.append(K.copy())
-                np.save("K_history_B.npy", self.K_history)
-                np.save("K_jumpu_jumpv_B.npy", K_jumpu_jumpv)
-                self.force_history.append(self._force_at_Gauss.copy())
-                np.save("force_history_B.npy", self.force_history)
-                self.dU_history.append(self._dU_GPs[i].copy())
-                np.save("dU_history_B.npy", self.dU_history)
-                self.gradU_history.append(self._dSurface_strain_GPs[i].copy())
-                np.save("gradU_history_B.npy", self.gradU_history)
+                    K_jumpu_jumpv = assign_K_jumpu_jumpv(self.N_matrix[i], Q_ij)
+                    K += K_jumpu_jumpv.flatten() * detJ * self._t * self._weight[i]  # 2/h
 
-            # Additional energy due to surface stiffness terms with Z_ijkl
-            # get stiffness matrix for element j in point i
-            K_grad_s_u_grad_s_v = assign_K_grad_s_u_grad_s_v(self.B_matrix[i], Z_ijkl)
-            K -= K_grad_s_u_grad_s_v.flatten() * detJ * self._t * self._weight[i]  # h/2.
+                    K_grad_s_u_grad_s_v = assign_K_grad_s_u_grad_s_v(self.B_matrix[i], Z_ijkl)
+                    K += K_grad_s_u_grad_s_v.flatten() * detJ * self._t * self._weight[i]  # h/2.
 
-            # Additional energy due to surface stiffness terms with Yn_H_inv_Fn_ijkl
-            # get stiffness matrix for element j in point i
-            K_grad_s_u_grad_s_v = assign_K_grad_s_u_grad_s_v(self.B_matrix[i], Yn_H_inv_Fn_ijkl)
-            K += K_grad_s_u_grad_s_v.flatten() * detJ * self._t * self._weight[i]  # h/2
+                    K_grad_s_u_grad_s_v = assign_K_grad_s_u_grad_s_v(self.B_matrix[i], Y_ijkl)
+                    K += K_grad_s_u_grad_s_v.flatten() * detJ * self._t * self._weight[i]  # h/2
 
-            # Additional energy due to coupling between surface stiffness and jump terms with H_inv_nF_ijk
-            # get stiffness matrix for element j in point i
-            K_jump_u_grad_s_v = assign_K_jump_u_grad_s_v(self.N_matrix[i], self.B_matrix[i], H_inv_nF_ijk)
-            K -= K_jump_u_grad_s_v.flatten() * detJ * self._t * self._weight[i]
+                    K_jump_u_grad_s_v = assign_K_jump_u_grad_s_v(self.N_matrix[i], self.B_matrix[i], H_ijk)
+                    K += K_jump_u_grad_s_v.flatten() * detJ * self._t * self._weight[i]
 
-            # Additional energy due to coupling between jump and surface stiffness terms with H_inv_nF_ijk
-            # get stiffness matrix for element j in point i
-            K_grad_s_u_jump_v = assign_K_grad_s_u_jump_v(self.N_matrix[i], self.B_matrix[i], H_inv_nF_ijk)
-            K -= K_grad_s_u_jump_v.flatten() * detJ * self._t * self._weight[i]
+                    K_grad_s_u_jump_v = assign_K_grad_s_u_jump_v(self.N_matrix[i], self.B_matrix[i], H_ijk)
+                    K += K_grad_s_u_jump_v.flatten() * detJ * self._t * self._weight[i]
 
-            # Consistency test
-            # print("K_jump_u_grad_s_v:\n", K_jump_u_grad_s_v)
-            # K_concistency = K_jump_u_grad_s_v + K_grad_s_u_jump_v
-            # np.save("K_concistency_B_implicit.npy", K_concistency)
-
-            # print("norm concistency", np.linalg.norm(K_concistency-K_concistency.T))
-            # np.save("K_concistency_B.npy", K_concistency)
             # Calculate residual vector P
             # Because we do not separate between coupled forces from jumps and surface elasticity only two terms are present instead of five
             # If we want more control we need to assign the extra forces and stress parts in the state variables vector increasing memory requirements
@@ -718,49 +704,140 @@ class InterfaceElement(BaseElement):
             )  # .reshape((self._nNodes,-1))[order]
             P -= P_grad_s_v.flatten() * detJ * self._t * self._weight[i]  # h/2.
 
-            # print("Res:", P_grad_s_v.flatten() * detJ * self._t * self._weight[i])
-            # print("ResK:", K_jump_u_grad_s_v@ dU.flatten())
-            # print("Force",self._force_at_Gauss)
-            # print("Surface stress",self._surface_stress_at_Gauss)
-
             self._stateVarsTemp[i][0 : self.nSpatialDimensions] = self._force_at_Gauss
             self._stateVarsTemp[i][3 : int(3 + self.nSpatialDimensions**2)] = self._surface_stress_at_Gauss.reshape(-1)
             self._stateVarsTemp[i][12 : int(12 + self._dU_GPs[i].shape[0])] += self._dU_GPs[i]
             self._stateVarsTemp[i][18 : int(18 + self._dSurface_strain_GPs[i].shape[0])] += self._dSurface_strain_GPs[i]
 
-            # J_jumpv_temp, J_grad_s_v_temp = self.calculate_forward_gradient_X_right( self.N_matrix[i], self.B_matrix[i],\
-            #                                                                         time, dTime, dU, i, P_jumpv[:,0], P_grad_s_v[:,0])
+            if fd_mode:
+                stateVars_old = np.array(self._stateVarsRef[i][36:], dtype=np.float64)
+                stateVars_base = np.array(self._stateVarsTemp[i][36:], dtype=np.float64)
+                J_jumpv_temp, J_grad_s_v_temp = self.calculate_forward_gradient_X_right(
+                    self.N_matrix[i],
+                    self.B_matrix[i],
+                    time,
+                    dTime,
+                    dU,
+                    i,
+                    P_jumpv[:, 0],
+                    P_grad_s_v[:, 0],
+                    force_state_old,
+                    surface_stress_state_old,
+                    stateVars_old,
+                    stateVars_base,
+                )
 
-            # J_jumpv_temp, J_grad_s_v_temp = self.calculate_central_gradient_X_right( self.N_matrix[i], self.B_matrix[i],\
-            #                                                                         time, dTime, dU, i,P_jumpv[:,0], P_grad_s_v[:,0])
-
-            # self._J_jumpv += J_jumpv_temp*detJ*self._t*self._weight[i]
-            # self._J_grad_s_v += J_grad_s_v_temp*detJ*self._t*self._weight[i]
+                detJ = self.sqrt_detG[i]
+                self._fd_debug_log(
+                    f"[FD GP={i}] ||J_jumpv_temp||_F            = {np.linalg.norm(J_jumpv_temp * detJ * self._t * self._weight[i]):.18e}"
+                )
+                self._fd_debug_log(
+                    f"[FD GP={i}] ||J_grad_s_v_temp||_F         = {np.linalg.norm(J_grad_s_v_temp * detJ * self._t * self._weight[i]):.18e}"
+                )
+                K += (J_jumpv_temp + J_grad_s_v_temp).flatten() * detJ * self._t * self._weight[i]
+                self._J_jumpv += J_jumpv_temp * detJ * self._t * self._weight[i]
+                self._J_grad_s_v += J_grad_s_v_temp * detJ * self._t * self._weight[i]
 
             # print("GP:", i)
             # print("Element jump:", self._dU_GPs[i])
             # print("Element force:", self._force_at_Gauss)
 
-        # J_jumpv_matrix = self._J_jumpv.reshape((self.nDof,self.nDof))
-        # J_grad_s_v_matrix = 0.*self._J_grad_s_v.reshape((self.nDof,self.nDof))
-        # K_matrix = K.reshape((self.nDof,self.nDof)).copy()
-        # K += (self._J_jumpv+self._J_grad_s_v).flatten() #Check with "correct" gradient
-        # np.save("K_concistency_B_implicit.npy", K)
+        if self._stiffness_export_mode != "none" and not self._has_exported_stiffness:
+            export_dir = self._stiffness_export_dir
+            export_dir.mkdir(parents=True, exist_ok=True)
 
-    def calculate_forward_gradient_X_right(self, N_matrix, B_matrix, time, dTime, dU, i, P_jumpv_X, P_grad_s_v_X):
+            implicit_matrix = (K - K_before).reshape((self.nDof, self.nDof))
+            export_mode = self._stiffness_export_mode
+
+            if export_mode == "implicit":
+                export_matrix = implicit_matrix
+            elif export_mode == "fd":
+                J_jumpv_matrix = self._J_jumpv.reshape((self.nDof, self.nDof))
+                J_grad_s_v_matrix = self._J_grad_s_v.reshape((self.nDof, self.nDof))
+                export_matrix = J_jumpv_matrix + J_grad_s_v_matrix
+            else:
+                export_matrix = None
+
+            if export_matrix is not None:
+                export_path = export_dir / f"{self._stiffness_export_basename}_el{self._elNumber}_{export_mode}.txt"
+                np.savetxt(export_path, export_matrix, fmt="%.18e")
+                self._has_exported_stiffness = True
+
+    def _fd_debug_log(self, message: str):
+        if not self._fd_debug_log_enabled:
+            return
+
+        log_dir = self._stiffness_export_dir
+        log_dir.mkdir(parents=True, exist_ok=True)
+        log_path = log_dir / f"{self._stiffness_export_basename}_el{self._elNumber}_fd_debug.txt"
+        mode = "w" if not self._has_reset_fd_debug_log else "a"
+        with log_path.open(mode, encoding="utf-8") as log_file:
+            log_file.write(message)
+            if not message.endswith("\n"):
+                log_file.write("\n")
+        self._has_reset_fd_debug_log = True
+
+    def calculate_forward_gradient_X_right(
+        self,
+        N_matrix,
+        B_matrix,
+        time,
+        dTime,
+        dU,
+        i,
+        P_jumpv_X,
+        P_grad_s_v_X,
+        force_state_old,
+        surface_stress_state_old,
+        stateVars_old,
+        stateVars_base,
+    ):
 
         # Initialize matrices for forward differentiation
-        P_jumpv_X_right = P_jumpv_X
-        P_grad_s_v_X_right = P_grad_s_v_X
-
         J_jumpv = np.zeros((self.nDof, self.nDof))
         J_grad_s_v = np.zeros((self.nDof, self.nDof))
+        dU_array = np.asarray(dU)
 
-        for p in range(dU.flatten().shape[0]):
-            force_at_Gauss_right = copy.deepcopy(self._force_at_Gauss_X)
-            surface_stress_at_Gauss_right = copy.deepcopy(self._surface_stress_at_Gauss_X)
-            dU_right = dU.flatten()
-            epsilon = max(1.0, np.abs(dU_right.flatten()[p])) * 1e-4
+        force_at_base = np.array(P_jumpv_X, dtype=np.float64)
+        surface_stress_at_base = np.array(P_grad_s_v_X, dtype=np.float64)
+        P_jumpv_0 = np.array(P_jumpv_X, dtype=np.float64)
+        P_grad_s_v_0 = np.array(P_grad_s_v_X, dtype=np.float64)
+
+        force_base_state = np.array(force_state_old, dtype=np.float64)
+        surface_stress_base_state = np.array(surface_stress_state_old, dtype=np.float64)
+        stateVars_buf_base = np.array(stateVars_old, dtype=np.float64)
+        self.material.assignStateVars(stateVars_buf_base)
+        if i == 0:
+            self._fd_debug_log(
+                f"[FD base GP={i}] ||dU_GP||_2={np.linalg.norm(self._dU_GPs[i]):.6e} "
+                f"||dSurf_GP||_2={np.linalg.norm(self._dSurface_strain_GPs[i]):.6e}"
+            )
+        self.material.computeStress(
+            force_base_state,
+            surface_stress_base_state,
+            self._Q_ij[i].copy(),
+            self._Z_ijkl[i].copy(),
+            self._H_ijk[i].copy(),
+            self._Y_ijkl[i].copy(),
+            self._dU_GPs[i],
+            self._dSurface_strain_GPs[i],
+            self.n[i],
+            time[-1],
+            dTime,
+        )
+        force_at_base = force_base_state.copy()
+        surface_stress_at_base = surface_stress_base_state.copy()
+        P_jumpv_0 = assign_P_jumpv(N_matrix, force_at_base)[:, 0]
+        P_grad_s_v_0 = assign_P_grad_s_v(B_matrix, surface_stress_at_base)[:, 0]
+
+        for p in range(dU_array.size):
+            stateVars_buf = np.array(stateVars_old, dtype=np.float64)
+            self.material.assignStateVars(stateVars_buf)
+
+            force_at_Gauss_right = force_state_old.copy()
+            surface_stress_at_Gauss_right = surface_stress_state_old.copy()
+            dU_right = dU_array.reshape(-1).copy()
+            epsilon = max(1.0, np.abs(dU_right[p])) * 1e-10
 
             dU_right[p] += epsilon
             dU_right = dU_right.reshape((-1, 3))
@@ -779,13 +856,23 @@ class InterfaceElement(BaseElement):
                 np.hstack((dSurface_strain_GPs_top_right, dSurface_strain_GPs_bottom_right))
             )
 
+            dU_GPs_delta = np.ascontiguousarray(dU_GPs_right - self._dU_GPs[i])
+            dSurface_strain_GPs_delta = np.ascontiguousarray(dSurface_strain_GPs_right - self._dSurface_strain_GPs[i])
+
+            if i == 0 and (p < 3 or p == dU_array.size - 1):
+                self._fd_debug_log(
+                    f"[FD col GP={i} p={p}] eps={epsilon:.6e} "
+                    f"||dU_delta||_2={np.linalg.norm(dU_GPs_delta):.6e} "
+                    f"||dSurf_delta||_2={np.linalg.norm(dSurface_strain_GPs_delta):.6e}"
+                )
+
             self.material.computeStress(
                 force_at_Gauss_right,
                 surface_stress_at_Gauss_right,
-                self._H_inv_ij[i],
-                self._Z_ijkl[i],
-                self._H_inv_nF_ijk[i],
-                self._Yn_H_inv_Fn_ijkl[i],
+                self._Q_ij[i].copy(),
+                self._Z_ijkl[i].copy(),
+                self._H_ijk[i].copy(),
+                self._Y_ijkl[i].copy(),
                 dU_GPs_right,
                 dSurface_strain_GPs_right,
                 self.n[i],
@@ -796,10 +883,15 @@ class InterfaceElement(BaseElement):
             P_jumpv_X_right = assign_P_jumpv(N_matrix, force_at_Gauss_right)[:, 0]
             P_grad_s_v_X_right = assign_P_grad_s_v(B_matrix, surface_stress_at_Gauss_right)[:, 0]
 
-            J_jumpv[:, p] = (P_jumpv_X_right - P_jumpv_X) / epsilon
-            J_grad_s_v[:, p] = (P_grad_s_v_X_right - P_grad_s_v_X) / epsilon
+            J_jumpv[:, p] = (P_jumpv_X_right - P_jumpv_0) / epsilon
+            J_grad_s_v[:, p] = (P_grad_s_v_X_right - P_grad_s_v_0) / epsilon
 
-        return J_jumpv, J_grad_s_v
+        self.material.assignStateVars(self._stateVarsTemp[i][36:])
+
+        if i == 0:
+            self._fd_debug_log(f"[FD] J_jumpv[0,0]   = {J_jumpv[0, 0]:.6g}")
+            self._fd_debug_log(f"[FD] J_grad_s_v[0,0]= {J_grad_s_v[0, 0]:.6g}")
+            return J_jumpv, J_grad_s_v
 
     def calculate_central_gradient_X_right(self, N_matrix, B_matrix, time, dTime, dU, i):
 
@@ -836,10 +928,10 @@ class InterfaceElement(BaseElement):
             self.material.computeStress(
                 force_at_Gauss_right,
                 surface_stress_at_Gauss_right,
-                self._H_inv_ij[i],
+                self._Q_ij[i],
                 self._Z_ijkl[i],
-                self._H_inv_nF_ijk[i],
-                self._Yn_H_inv_Fn_ijkl[i],
+                self._H_ijk[i],
+                self._Y_ijkl[i],
                 dU_GPs_right[i],
                 dSurface_strain_GPs_right[i],
                 self.n[i],
