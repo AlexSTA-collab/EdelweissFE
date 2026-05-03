@@ -1,0 +1,141 @@
+import numpy as np
+
+cimport cython
+cimport libcpp.cast
+cimport numpy as np
+
+from edelweissfe.utils.exceptions import CutbackRequest
+
+from libc.stdlib cimport free, malloc
+from libcpp.memory cimport allocator, make_unique, unique_ptr
+from libcpp.string cimport string
+from libcpp.vector cimport vector
+
+
+cdef class MarmotInterfaceMaterialWrapper:
+
+    cdef MarmotMaterialHypoElasticInterface* _theMarmotInterfaceMaterialInstance
+    cdef double[::1] _stateVars
+    cdef double[::1] _materialProperties
+    cdef int _materialID
+    cdef str _materialName
+
+
+    def __cinit__(self, str materialName, double[::1] materialProperties):
+        """This C-level method is responsible for actually instancing the Marmot material.
+        In contrast to the __init__ method, it is guaranteed that this method is called only once.
+
+        Parameters
+        ----------
+        materialProperties : np.ndarray
+            The material properties of the material.
+        """
+
+        self._materialName = materialName
+        self._materialProperties = materialProperties
+        self._materialID = 1
+        cdef int nMaterialProperties = len(materialProperties)
+
+        try:
+            print("HELLO:",materialName.upper())
+            self._theMarmotInterfaceMaterialInstance = MarmotMaterialHypoElasticInterfaceFactory.createMaterial(materialName.upper().encode('utf-8'),
+                                                                                                                &self._materialProperties[0],
+                                                                                                                nMaterialProperties,
+                                                                                                                self._materialID)
+        except IndexError:
+            raise NotImplementedError("Marmot interface material {:} not found in library.".format(materialName))
+
+    @property
+    def name(self):
+        return self._materialName
+
+    @property
+    def properties(self):
+        return np.asarray(self._materialProperties)
+
+    def computeStress(self,
+                      double[::1]  force,
+                      double[:,::1] surface_stress, # assume RowMajor order = C order, i.e. the last index is the fastest changing index
+                      double[:,::1] H_inv_ij, # assume RowMajor order = C order, i.e. the last index is the fastest changing index
+                      double[:,:,:,::1] Z_ijkl,
+                      double[:,:,::1] H_inv_nF_ijk,
+                      double[:,:,:,::1] Yn_H_inv_Fn_ijkl,
+                      double[::1] dU,
+                      double[::1] dSurface_strain,
+                      double[::1] normal,
+                      double  timeOld,
+                      double  dT):
+
+        cdef double pNewDT
+        pNewDT = 1e36
+
+        self._theMarmotInterfaceMaterialInstance.computeStress(
+            &force[0],
+            &surface_stress[0,0],
+            &H_inv_ij[0,0],
+            &Z_ijkl[0,0,0,0],
+            &H_inv_nF_ijk[0,0,0],
+            &Yn_H_inv_Fn_ijkl[0,0,0,0],
+            &dU[0],
+            &dSurface_strain[0],
+            &normal[0],
+            &timeOld,
+            dT,
+            pNewDT)
+
+        if pNewDT < 1.0:
+            raise CutbackRequest("Material requests for a cutback!", pNewDT)
+
+    def getNumberOfRequiredStateVars(self,):
+
+        cdef int numberOfRequiredStateVarsMaterial = self._theMarmotInterfaceMaterialInstance.getNumberOfRequiredStateVars()
+        return numberOfRequiredStateVarsMaterial
+
+    def assignStateVars(self, double[::1] stateVars):
+
+        self._stateVars = stateVars
+
+        self._theMarmotInterfaceMaterialInstance.assignStateVars(&self._stateVars[0], len(self._stateVars))
+
+    def getResultArray(self, result, getPersistentView=True):
+
+        cdef string result_ =  result.encode('UTF-8')
+
+        cdef StateView res = self._theMarmotInterfaceMaterialInstance.getStateView(result_, &self._stateVars[0])
+
+        cdef double[::1] theView = <double[:res.stateSize]> ( res.stateLocation )
+
+        return np.array(  theView, copy= not getPersistentView)
+
+    def __dealloc__(self):
+        # this is the destructor
+        del self._theMarmotInterfaceMaterialInstance
+
+def test_MarmotInterfaceMaterialWrapper():
+
+    print("Testing MarmotInterfaceMaterialWrapper...")
+    marmotMaterialInterfaceWrapper = MarmotInterfaceMaterialWrapper("LINEARELASTICINTERFACE", np.array([100, .3, 200, .3, 400, .2, 1e0]))
+
+    force = np.array([100., 200., 300.])
+    surface_stress = np.ones((3,3))
+    H_inv_ij = np.ones((3,3))
+    Z_ijkl = np.ones((3,3,3,3))
+    H_inv_nF_ijk = np.ones((3,3,3))
+    Yn_H_inv_Fn_ijkl = np.ones((3,3,3,3))
+    dU = np.ones(6) * 3
+    dSurface_strain = np.ones(18) * 4
+    normal = np.ones(3) * 5
+    timeOld = 0.0
+    dT = 0.1
+
+    marmotMaterialInterfaceWrapper.computeStress(force,
+                                                 surface_stress,
+                                                 H_inv_ij,
+                                                 Z_ijkl,
+                                                 H_inv_nF_ijk,
+                                                 Yn_H_inv_Fn_ijkl,
+                                                 dU,
+                                                 dSurface_strain,
+                                                 normal,
+                                                 timeOld,
+                                                 dT)

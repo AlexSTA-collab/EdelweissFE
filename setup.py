@@ -76,6 +76,18 @@ extensions = [
         language="c++",
     )
 ]
+extensions += [
+    Extension(
+        "*",
+        sources=["edelweissfe/elements/marmotelement/interface_element.pyx"],
+        include_dirs=[join(marmot_dir, "include"), numpy.get_include()],
+        libraries=["Marmot"],
+        library_dirs=[join(marmot_dir, "lib")],
+        runtime_library_dirs=[join(marmot_dir, "lib")],
+        language="c++",
+        extra_compile_args=["-O3", "-std=c++20"],
+    )
+]
 
 print("Gather the extension for wrapping a hypoelastic Marmot material")
 extensions += [
@@ -83,6 +95,20 @@ extensions += [
         "*",
         sources=[
             "edelweissfe/elements/marmotsingleqpelement/marmotmaterialhypoelasticwrapper.pyx",
+        ],
+        include_dirs=[join(marmot_dir, "include"), numpy.get_include(), eigen_include],
+        libraries=["Marmot"],
+        library_dirs=[join(marmot_dir, "lib")],
+        runtime_library_dirs=[join(marmot_dir, "lib")],
+        language="c++",
+        extra_compile_args=["-O3", "-std=c++20"],
+    )
+]
+extensions += [
+    Extension(
+        "*",
+        sources=[
+            "edelweissfe/materials/marmotmaterialhypoelasticinterface/marmotmaterialhypoelasticinterfacewrapper.pyx",
         ],
         include_dirs=[join(marmot_dir, "include"), numpy.get_include(), eigen_include],
         libraries=["Marmot"],
