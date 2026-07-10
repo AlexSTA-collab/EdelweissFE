@@ -76,6 +76,11 @@ def getElementClass(elType: str, provider: str = None) -> type:
         except KeyError:
             raise Exception("Edelweiss element not found in library.")
 
+    elif strCaseCmp(provider, "interfaceelement"):
+        from edelweissfe.elements.interfaceelement.element import InterfaceElement
+
+        return InterfaceElement
+
     elif provider.lower() == "marmot":
         from edelweissfe.elements.marmotelement.element import MarmotElementWrapper
 
