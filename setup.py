@@ -244,6 +244,7 @@ extensions += [
         ],
         include_dirs=[
             numpy.get_include(),
+            join(default_install_prefix, "include", "suitesparse"),
         ],
         libraries=[
             "klu",

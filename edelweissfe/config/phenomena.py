@@ -52,6 +52,13 @@ phenomena = {
     "concentration": "scalar",
     "chemical potential": "scalar",
     "strain symmetric": "symmetric tensor second order",
+    "assumedGradientMinus": "symmetric tensor second order",
+    "assumedGradientPlus": "symmetric tensor second order",
+    "inPlaneStrainMinus": "in plane symmetric tensor second order",
+    "inPlaneStrainPlus": "in plane symmetric tensor second order",
+    "normalGradientAverage": "vector",
+    "commonTraction": "vector",
+    "interfacePressure": "scalar",
 }
 
 
@@ -65,6 +72,13 @@ fieldCorrectionTolerance = {
     "concentration": 1e-1,
     "chemical potential": 1e-1,
     "strain symmetric": 1e-7,
+    "assumedGradientMinus": 1e-7,
+    "assumedGradientPlus": 1e-7,
+    "inPlaneStrainMinus": 1e-7,
+    "inPlaneStrainPlus": 1e-7,
+    "normalGradientAverage": 1e-7,
+    "commonTraction": 1e-7,
+    "interfacePressure": 1e-7,
     "scalar variables": 1e-3,
 }
 
@@ -77,6 +91,13 @@ fluxResidualTolerance = {
     "concentration": 1e-1,
     "chemical potential": 1e-2,
     "strain symmetric": 1e-8,
+    "assumedGradientMinus": 1e-8,
+    "assumedGradientPlus": 1e-8,
+    "inPlaneStrainMinus": 1e-8,
+    "inPlaneStrainPlus": 1e-8,
+    "normalGradientAverage": 1e-8,
+    "commonTraction": 1e-8,
+    "interfacePressure": 1e-8,
     "scalar variables": 1e-8,
 }
 
@@ -89,6 +110,13 @@ fluxResidualToleranceAlternative = {
     "concentration": 5e-2,
     "chemical potential": 5e-2,
     "strain symmetric": 5e-3,
+    "assumedGradientMinus": 5e-3,
+    "assumedGradientPlus": 5e-3,
+    "inPlaneStrainMinus": 5e-3,
+    "inPlaneStrainPlus": 5e-3,
+    "normalGradientAverage": 5e-3,
+    "commonTraction": 5e-3,
+    "interfacePressure": 5e-3,
     "scalar variables": 1e-8,
 }
 
@@ -117,5 +145,8 @@ def getFieldSize(field, domainSize):
         #     return 3
         # elif domainSize == 3:
         return 6
+    if fType == "in plane symmetric tensor second order":
+        # tangent-plane symmetric surface strain: [e_11, e_22, e_12]
+        return 3
 
     raise NotImplementedError("Invalid physical field {:} requested".format(field))

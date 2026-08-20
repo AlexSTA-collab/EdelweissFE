@@ -217,14 +217,13 @@ cdef class MarmotElementWrapper:
                                double dTime) except * nogil:
         """Evaluate residual and stiffness for given time, field, and field increment."""
 
+        cdef double pNewDT = 1e36
+
         if not self._hasMaterial:
             raise Exception("Element {:} has no material assigned!".format(self._elNumber))
 
-        cdef double pNewDT
         with nogil:
             self._initializeStateVarsTemp()
-
-            pNewDT = 1e36
 
             self.marmotElement.computeYourself(&U[0],
                                                &dU[0],
@@ -233,8 +232,9 @@ cdef class MarmotElementWrapper:
                                                &time[0],
                                                dTime,
                                                pNewDT)
-            if pNewDT < 1.0:
-                raise CutbackRequest("Element {:} requests for a cutback!".format(self.elNumber), pNewDT)
+
+        if pNewDT < 1.0:
+            raise CutbackRequest("Element {:} requests for a cutback!".format(self.elNumber), pNewDT)
 
     cpdef void computeYourselfExplicit(self,
                                        double[::1] Pe,
@@ -247,20 +247,14 @@ cdef class MarmotElementWrapper:
         if not self._hasMaterial:
             raise Exception("Element {:} has no material assigned!".format(self._elNumber))
 
-        cdef double pNewDT
         with nogil:
             self._initializeStateVarsTemp()
 
-            pNewDT = 1e36
-
-            self.marmotElement.computeYourselfExplicit(&U[0],
-                                                       &dU[0],
-                                                       &Pe[0],
-                                                       &time[0],
-                                                       dTime,
-                                                       pNewDT)
-            if pNewDT < 1.0:
-                raise CutbackRequest("Element {:} requests for a cutback!".format(self.elNumber), pNewDT)
+            self.marmotElement.computeKernelsExplicit(&U[0],
+                                                      &dU[0],
+                                                      &Pe[0],
+                                                      time[1],
+                                                      dTime)
 
     def computeDistributedLoad(self,
                                str loadType,
@@ -279,7 +273,7 @@ cdef class MarmotElementWrapper:
                                                   faceID,
                                                   &load[0],
                                                   &U[0],
-                                                  &time[0],
+                                                  time[1],
                                                   dTime)
 
     def computeBodyForce(self,
@@ -296,7 +290,7 @@ cdef class MarmotElementWrapper:
                                     &K[0],
                                     &load[0],
                                     &U[0],
-                                    &time[0],
+                                    time[1],
                                     dTime)
 
     def computeLumpedInertia(self, double[::1] M):

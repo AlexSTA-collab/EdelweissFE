@@ -227,23 +227,23 @@ cdef class MarmotInterfaceElementWrapper:
                          double dTime) nogil except *:
         """Evaluate residual and stiffness for given time, field, and field increment."""
 
+        cdef double pNewDT = 1e36
+
         if not self._hasMaterial:
             raise Exception("Element {:} has no material assigned!".format(self._elNumber))
 
-        cdef double pNewDT
         with nogil:
             self._initializeStateVarsTemp()
 
-            pNewDT = 1e36
-
             self.marmotElement.computeYourself(&U[0], &dU[0],
-                                                &Pe[0],
-                                                &Ke[0],
-                                                &time[0],
-                                                dTime,
-                                                pNewDT)
-            if pNewDT < 1.0:
-                raise CutbackRequest("Element {:} requests for a cutback!".format(self.elNumber), pNewDT)
+                                               &Pe[0],
+                                               &Ke[0],
+                                               &time[0],
+                                               dTime,
+                                               pNewDT)
+
+        if pNewDT < 1.0:
+            raise CutbackRequest("Element {:} requests for a cutback!".format(self.elNumber), pNewDT)
 
     def computeDistributedLoad(self,
                                str loadType,
@@ -262,7 +262,7 @@ cdef class MarmotInterfaceElementWrapper:
                                     faceID,
                                     &load[0],
                                     &U[0],
-                                    &time[0],
+                                    time[1],
                                     dTime)
 
     def computeBodyForce(self,
@@ -279,7 +279,7 @@ cdef class MarmotInterfaceElementWrapper:
                                     &K[0],
                                     &load[0],
                                     &U[0],
-                                    &time[0],
+                                    time[1],
                                     dTime)
 
     def acceptLastState(self,):

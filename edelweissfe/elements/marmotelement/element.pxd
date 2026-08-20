@@ -88,20 +88,26 @@ cdef extern from "Marmot/MarmotElement.h":
 
         void initializeYourself()
 
+        void computeKernels(const double* QTotal,
+                            const double* dQ,
+                            double* Pe,
+                            double* Ke,
+                            double time,
+                            double dT) except +ValueError
+
         void computeYourself(const double* QTotal,
                              const double* dQ,
                              double* Pe,
                              double* Ke,
                              const double* time,
                              double dT,
-                             double& pNewdT) except +ValueError
+                             double& pNewDT) except +ValueError
 
-        void computeYourselfExplicit(const double* QTotal,
-                                     const double* dQ,
-                                     double* Pe,
-                                     const double* time,
-                                     double dT,
-                                     double& pNewdT) except +ValueError
+        void computeKernelsExplicit(const double* QTotal,
+                                    const double* dQ,
+                                    double* Pe,
+                                    double time,
+                                    double dT) except +ValueError
 
         void setInitialConditions(StateTypes state,
                                   const double* values)
@@ -113,7 +119,7 @@ cdef extern from "Marmot/MarmotElement.h":
                                 int faceID,
                                 const double* load,
                                 const double* QTotal,
-                                const double* time,
+                                double time,
                                 double dT)
 
         void computeBodyForce(
@@ -121,7 +127,7 @@ cdef extern from "Marmot/MarmotElement.h":
                         double* K,
                         const double* load,
                         const double* QTotal,
-                        const double* time,
+                        double time,
                         double dT)
 
         void computeLumpedInertia(double* M)
