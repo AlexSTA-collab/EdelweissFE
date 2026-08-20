@@ -29,3 +29,5 @@ edelweissfe/elements/marmotelement/element.cpp
 edelweissfe/elements/marmotelement/interface_element.cpp
 edelweissfe/elements/marmotsingleqpelement/marmotmaterialhypoelasticwrapper.cpp
 edelweissfe/linsolve/klu/klu.c
+edelweissfe/**/*.cpp
+edelweissfe/**/*.html
