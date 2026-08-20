@@ -19,3 +19,13 @@ build
 EdelweissFE.egg-info
 docs
 edelweissfe/built_extensions.log
+
+# Build artefacts. Every Extension in setup.py sources a .pyx and cythonize() runs at
+# build time with annotate=True, so the .c/.cpp/.html/.so below are all regenerated.
+# Committing them risks a build silently reusing a binary compiled on another machine,
+# and the ABI tag matching makes that more likely, not less.
+*.pyc
+edelweissfe/elements/marmotelement/element.cpp
+edelweissfe/elements/marmotelement/interface_element.cpp
+edelweissfe/elements/marmotsingleqpelement/marmotmaterialhypoelasticwrapper.cpp
+edelweissfe/linsolve/klu/klu.c
