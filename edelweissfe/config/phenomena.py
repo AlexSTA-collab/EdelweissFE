@@ -57,8 +57,10 @@ phenomena = {
     "inPlaneStrainMinus": "in plane symmetric tensor second order",
     "inPlaneStrainPlus": "in plane symmetric tensor second order",
     "normalGradientAverage": "vector",
+    "normalGradientJump": "vector",
     "commonTraction": "vector",
     "interfacePressure": "scalar",
+    "interfacePressureJump": "scalar",
 }
 
 
@@ -77,8 +79,10 @@ fieldCorrectionTolerance = {
     "inPlaneStrainMinus": 1e-7,
     "inPlaneStrainPlus": 1e-7,
     "normalGradientAverage": 1e-7,
+    "normalGradientJump": 1e-7,
     "commonTraction": 1e-7,
     "interfacePressure": 1e-7,
+    "interfacePressureJump": 1e-7,
     "scalar variables": 1e-3,
 }
 
@@ -96,8 +100,10 @@ fluxResidualTolerance = {
     "inPlaneStrainMinus": 1e-8,
     "inPlaneStrainPlus": 1e-8,
     "normalGradientAverage": 1e-8,
+    "normalGradientJump": 1e-8,
     "commonTraction": 1e-8,
     "interfacePressure": 1e-8,
+    "interfacePressureJump": 1e-8,
     "scalar variables": 1e-8,
 }
 
@@ -115,8 +121,10 @@ fluxResidualToleranceAlternative = {
     "inPlaneStrainMinus": 5e-3,
     "inPlaneStrainPlus": 5e-3,
     "normalGradientAverage": 5e-3,
+    "normalGradientJump": 5e-3,
     "commonTraction": 5e-3,
     "interfacePressure": 5e-3,
+    "interfacePressureJump": 5e-3,
     "scalar variables": 1e-8,
 }
 
