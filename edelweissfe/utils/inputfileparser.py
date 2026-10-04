@@ -546,6 +546,9 @@ def parseInputFile(
         fileDict = existingFileDict
 
     keyword = currentKeyword
+    # An included file may consist of data lines only, which belong to the keyword line (and its options)
+    # active in the including file.
+    options = fileDict[keyword][-1] if keyword is not None and fileDict.get(keyword) else None
     with open(fileName) as f:
         # filter out empty lines and comments
         lines = (line.strip() for line in f)
