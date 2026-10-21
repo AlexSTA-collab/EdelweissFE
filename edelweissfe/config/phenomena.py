@@ -55,6 +55,9 @@ phenomena = {
     "plastic multiplier": "scalar",
     "pressure": "scalar",
     "jacobi": "scalar",
+    "normalGradientJump": "vector",
+    "interfacePressure": "scalar",
+    "interfacePressureJump": "scalar",
 }
 
 
@@ -81,6 +84,9 @@ inertiaKind = {
     "plastic multiplier": "non-mechanical",
     "pressure": "non-mechanical",
     "jacobi": "non-mechanical",
+    "normalGradientJump": "non-mechanical",
+    "interfacePressure": "non-mechanical",
+    "interfacePressureJump": "non-mechanical",
 }
 
 
@@ -98,6 +104,9 @@ fieldCorrectionTolerance = {
     "plastic multiplier": 1e-8,
     "pressure": 1e-8,
     "jacobi": 1e-8,
+    "normalGradientJump": 1e-7,
+    "interfacePressure": 1e-7,
+    "interfacePressureJump": 1e-7,
 }
 
 fluxResidualTolerance = {
@@ -113,6 +122,9 @@ fluxResidualTolerance = {
     "plastic multiplier": 1e-8,
     "pressure": 1e-8,
     "jacobi": 1e-8,
+    "normalGradientJump": 1e-8,
+    "interfacePressure": 1e-8,
+    "interfacePressureJump": 1e-8,
 }
 
 fluxResidualToleranceAlternative = {
@@ -128,6 +140,9 @@ fluxResidualToleranceAlternative = {
     "plastic multiplier": 5e-3,
     "pressure": 5e-3,
     "jacobi": 5e-3,
+    "normalGradientJump": 5e-3,
+    "interfacePressure": 5e-3,
+    "interfacePressureJump": 5e-3,
 }
 
 # domain                 dimensions
