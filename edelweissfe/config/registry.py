@@ -188,6 +188,7 @@ _addBuiltins(
         "equalvaluelagrangian",
         "equalvaluepenalty",
         "hangingnode",
+        "inclinedroller",
         "linearizedrigidbody",
         "nodetodeformablesurfacepenalty",
         "nodetodiscreterigidbodypenalty",
