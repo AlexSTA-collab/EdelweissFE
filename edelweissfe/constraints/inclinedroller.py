@@ -76,6 +76,58 @@ class InclinedRollerSchema:
         dtype=float,
         default=15.0,
     )
+    activeFromTime: float | None = schemaField(
+        description="MPC form only: the roller is enforced from the step that starts at this total time on, "
+        "on the increments of that step and the later ones, i.e. relative to the state reached by then "
+        "(e.g. a confining pressure applied with free lateral faces in a first step). Unset: always active.",
+        dtype=float,
+        default=None,
+    )
+
+
+def classifyRollerNodeSets(model: FEModel, nSets: str, legacy: bool, cosTolerance: float):
+    """Classify the node sets of a roller by the plane their nodes lie in.
+
+    Shared by the Lagrange-multiplier roller and its multi-point-constraint form
+    (:mod:`~edelweissfe.constraints.inclinedrollermpc`), so both guide exactly the same nodes.
+
+    Returns
+    -------
+    tuple
+        ``(nodes_by_label, guided_labels, report)``: every node of the listed sets by label, the labels of
+        the nodes that are guided onto the interface tangent (the others lie on Y-symmetry planes), and the
+        printable classification of each node set.
+    """
+    node_set_names = [name.strip() for name in nSets.split(";") if name.strip()]
+    if not node_set_names:
+        raise ValueError("InclinedRoller requires at least one node set in 'nSets'.")
+
+    nodes_by_label = {}
+    guided_labels = set()
+    report = []
+    for node_set_name in node_set_names:
+        if node_set_name not in model.nodeSets:
+            raise KeyError(f"Unknown node set '{node_set_name}' in InclinedRoller constraint.")
+        set_nodes = list(model.nodeSets[node_set_name])
+        for node in set_nodes:
+            nodes_by_label[node.label] = node
+
+        if legacy:
+            kind = "guided (legacy)"
+        else:
+            face_normal = Constraint._fitPlaneNormal(set_nodes)
+            if face_normal is None:
+                # too few nodes, or not planar enough to classify -> stay on the safe side
+                kind = "guided (plane fit inconclusive)"
+            elif abs(face_normal[1]) >= cosTolerance:
+                kind = "Y-symmetry (u_y = 0 only)"
+            else:
+                kind = "guided (n.u = 0, u_y = 0)"
+        if not kind.startswith("Y-symmetry"):
+            guided_labels.update(node.label for node in set_nodes)
+        report.append(f"    {node_set_name:<26} -> {kind}")
+
+    return nodes_by_label, guided_labels, report
 
 
 class Constraint(ConstraintBase):
@@ -143,35 +195,9 @@ class Constraint(ConstraintBase):
         legacy = bool(configuration.legacy)
         cosTolerance = math.cos(math.radians(float(configuration.faceToleranceDegrees)))
 
-        node_set_names = [name.strip() for name in configuration.nSets.split(";") if name.strip()]
-        if not node_set_names:
-            raise ValueError("InclinedRoller requires at least one node set in 'nSets'.")
-
-        nodes_by_label = {}
-        guided_labels = set()
-        report = []
-        for node_set_name in node_set_names:
-            if node_set_name not in model.nodeSets:
-                raise KeyError(f"Unknown node set '{node_set_name}' in InclinedRoller constraint.")
-            set_nodes = list(model.nodeSets[node_set_name])
-            for node in set_nodes:
-                nodes_by_label[node.label] = node
-
-            if legacy:
-                kind = "guided (legacy)"
-            else:
-                face_normal = self._fitPlaneNormal(set_nodes)
-                if face_normal is None:
-                    # too few nodes, or not planar enough to classify -> stay on the safe side
-                    kind = "guided (plane fit inconclusive)"
-                elif abs(face_normal[1]) >= cosTolerance:
-                    kind = "Y-symmetry (u_y = 0 only)"
-                else:
-                    kind = "guided (n.u = 0, u_y = 0)"
-            if not kind.startswith("Y-symmetry"):
-                guided_labels.update(node.label for node in set_nodes)
-            report.append(f"    {node_set_name:<26} -> {kind}")
-
+        nodes_by_label, guided_labels, report = classifyRollerNodeSets(
+            model, configuration.nSets, legacy, cosTolerance
+        )
         self._nodes = [nodes_by_label[label] for label in sorted(nodes_by_label)]
         self._n_nodes = len(self._nodes)
         self._fields_on_nodes = [[self._field] for _ in self._nodes]
