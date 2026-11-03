@@ -188,6 +188,8 @@ _addBuiltins(
         "equalvaluepenalty",
         "hangingnode",
         "inclinedroller",
+        "inclinedrollermpc",
+        "nodalmpc",
         "linearizedrigidbody",
         "nodetodeformablesurfacepenalty",
         "nodetodiscreterigidbodypenalty",
