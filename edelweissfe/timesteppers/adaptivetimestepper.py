@@ -33,6 +33,10 @@ from edelweissfe.timesteppers.base.timestepperbase import TimeStepperBase
 from edelweissfe.timesteppers.timestep import TimeStep
 from edelweissfe.utils.exceptions import ReachedMaxIncrements, ReachedMinIncrementSize
 
+import os as _os
+
+_HIT_TIMES = sorted(float(t) for t in _os.environ.get("EFE_HIT_TIMES", "").split(",") if t.strip())
+
 
 class AdaptiveTimeStepper(TimeStepperBase):
     """Divides a step into increments whose size adapts to the convergence of the solver: it grows
@@ -140,6 +144,15 @@ class AdaptiveTimeStepper(TimeStepperBase):
             theIncrement = 0.0
         else:
             theIncrement = self.increment
+
+        # EFE_HIT_TIMES="t1,t2,...": shorten this increment (not the stepper's increment size) so that it ends exactly
+        # on the next listed total time, e.g. a reference's output times, so that two analyses can be compared there.
+        if theIncrement > 0.0:
+            for t in _HIT_TIMES:
+                target = (t - self.currentTime) / self.stepLength
+                if self.finishedStepProgress + 1e-12 < target < self.finishedStepProgress + theIncrement - 1e-12:
+                    theIncrement = target - self.finishedStepProgress
+                    break
 
         progress = self.finishedStepProgress + theIncrement
         return TimeStep(
