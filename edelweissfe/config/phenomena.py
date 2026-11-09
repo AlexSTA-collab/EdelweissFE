@@ -58,6 +58,16 @@ phenomena = {
     "normalGradientJump": "vector",
     "interfacePressure": "scalar",
     "interfacePressureJump": "scalar",
+    "layerMode2": "vector",
+    "layerMode3": "vector",
+    "layerMode4": "vector",
+    "layerMode5": "vector",
+    "layerMode6": "vector",
+    "layerMode7": "vector",
+    "layerMode8": "vector",
+    "layerMode9": "vector",
+    "layerMode10": "vector",
+    "layerMode11": "vector",
 }
 
 
@@ -87,6 +97,16 @@ inertiaKind = {
     "normalGradientJump": "non-mechanical",
     "interfacePressure": "non-mechanical",
     "interfacePressureJump": "non-mechanical",
+    "layerMode2": "non-mechanical",
+    "layerMode3": "non-mechanical",
+    "layerMode4": "non-mechanical",
+    "layerMode5": "non-mechanical",
+    "layerMode6": "non-mechanical",
+    "layerMode7": "non-mechanical",
+    "layerMode8": "non-mechanical",
+    "layerMode9": "non-mechanical",
+    "layerMode10": "non-mechanical",
+    "layerMode11": "non-mechanical",
 }
 
 
@@ -107,6 +127,16 @@ fieldCorrectionTolerance = {
     "normalGradientJump": 1e-7,
     "interfacePressure": 1e-7,
     "interfacePressureJump": 1e-7,
+    "layerMode2": 1e-7,
+    "layerMode3": 1e-7,
+    "layerMode4": 1e-7,
+    "layerMode5": 1e-7,
+    "layerMode6": 1e-7,
+    "layerMode7": 1e-7,
+    "layerMode8": 1e-7,
+    "layerMode9": 1e-7,
+    "layerMode10": 1e-7,
+    "layerMode11": 1e-7,
 }
 
 fluxResidualTolerance = {
@@ -125,6 +155,16 @@ fluxResidualTolerance = {
     "normalGradientJump": 1e-8,
     "interfacePressure": 1e-8,
     "interfacePressureJump": 1e-8,
+    "layerMode2": 1e-8,
+    "layerMode3": 1e-8,
+    "layerMode4": 1e-8,
+    "layerMode5": 1e-8,
+    "layerMode6": 1e-8,
+    "layerMode7": 1e-8,
+    "layerMode8": 1e-8,
+    "layerMode9": 1e-8,
+    "layerMode10": 1e-8,
+    "layerMode11": 1e-8,
 }
 
 fluxResidualToleranceAlternative = {
@@ -143,6 +183,16 @@ fluxResidualToleranceAlternative = {
     "normalGradientJump": 5e-3,
     "interfacePressure": 5e-3,
     "interfacePressureJump": 5e-3,
+    "layerMode2": 5e-3,
+    "layerMode3": 5e-3,
+    "layerMode4": 5e-3,
+    "layerMode5": 5e-3,
+    "layerMode6": 5e-3,
+    "layerMode7": 5e-3,
+    "layerMode8": 5e-3,
+    "layerMode9": 5e-3,
+    "layerMode10": 5e-3,
+    "layerMode11": 5e-3,
 }
 
 # domain                 dimensions

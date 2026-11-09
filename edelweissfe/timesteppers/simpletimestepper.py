@@ -32,6 +32,11 @@ from edelweissfe.timesteppers.timestep import TimeStep
 from edelweissfe.utils.exceptions import ReachedMaxIncrements, ReachedMinIncrementSize
 
 
+import os as _os
+
+_HIT_TIMES = sorted(float(t) for t in _os.environ.get("EFE_HIT_TIMES", "").split(",") if t.strip())
+
+
 class SimpleTimeStepper(TimeStepperBase):
     """Divides a step into increments of a fixed size, or of a size enforced by the solver, after one
     zero increment.
@@ -129,12 +134,21 @@ class SimpleTimeStepper(TimeStepperBase):
         if remainder < self.increment:
             self.increment = remainder
 
-        progress += self.increment
+        # EFE_HIT_TIMES="t1,t2,...": shorten this increment (not the stepper's increment size) so that it ends exactly
+        # on the next listed total time, e.g. a reference's output times, so that two analyses can be compared there.
+        increment = self.increment
+        for t in _HIT_TIMES:
+            target = (t - self.currentTime) / self.stepLength
+            if progress + 1e-12 < target < progress + increment - 1e-12:
+                increment = target - progress
+                break
+
+        progress += increment
         return TimeStep(
             self.totalIncrements + 1,
-            self.increment,
+            increment,
             progress,
-            self.stepLength * self.increment,
+            self.stepLength * increment,
             self.stepLength * progress,
             self.currentTime + self.stepLength * progress,
         )

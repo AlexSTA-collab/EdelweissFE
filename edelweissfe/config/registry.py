@@ -215,6 +215,7 @@ _addBuiltins(
         "indirectcontractioncontrol",
         "indirectcontrol",
         "initializematerial",
+        "layeradapt",
         "modelupdate",
         "nodeforces",
         "options",
